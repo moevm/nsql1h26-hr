@@ -5,6 +5,15 @@ services:
     build:
       context:
         ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_USER=${NEO4J_USER}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_URI=bolt://neo4j-container:7687
+    depends_on:
+      neo4j-service:
+        condition: service_healthy
     
   neo4j-service:
     image: neo4j:5
@@ -18,4 +27,10 @@ services:
       - ./neo4j/logs:/logs
       - ./neo4j/config:/config
       - ./neo4j/plugins:/plugins
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER}", "-p", "${NEO4J_PASSWORD}", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     
