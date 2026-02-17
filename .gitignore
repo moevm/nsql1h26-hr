@@ -1,3 +1,5 @@
 .env
 */neo4j/data
 */neo4j/logs
+node_modules
+package-lock.json

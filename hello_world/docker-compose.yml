@@ -1,4 +1,14 @@
 services:
+
+  frontend-service:
+    container_name: frontend-container
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend-service
+    
   backend-service:
     image: backend-image
     container_name: backend-container
