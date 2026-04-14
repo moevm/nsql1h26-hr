@@ -187,7 +187,7 @@ paths:
   /v2/vacancies/{id}:
     get:
       summary: Получить вакансию по ID
-      
+      description: Роль HR, ADMIN, MANAGER может получать вакансии. 
       tags: [Vacancies]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -205,7 +205,7 @@ paths:
             description: Не найдено
     patch:
       summary: Обновить вакансию
-      tags: [Vacancies]
+      description: Роль HR, ADMIN может обновлять вакансии.
       security: [{ BearerAuth: [] }]
       parameters:
         - name: id
@@ -235,6 +235,7 @@ paths:
   /v2/test-tasks:
     get:
       summary: Список тестовых заданий
+      description: Роль HR, ADMIN ?????????????
       tags: [TestTasks]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -250,7 +251,7 @@ paths:
                     schema: { type: array, items: { $ref: '#/components/schemas/TestTask' } }
     post:
       summary: Создать тестовое задание для вакансии
-      tags: [TestTasks]
+      description: Роль HR. Тестовое задание должно быть связано с вакансией (vacancy_id), для которой оно предназначено (связь TEST_FOR). В одной вакансии может быть несколько тестовых заданий
       security: [{ BearerAuth: [] }]
       requestBody:
         required: true
@@ -267,6 +268,7 @@ paths:
   /v2/test-tasks/{id}:
     get:
       summary: Получить тестовое задание по ID
+      description: Роль - любая
       tags: [TestTasks]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -281,6 +283,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Обновить тестовое задание
+      description: Роль HR, ADMIN может обновлять тестовые задания.
       tags: [TestTasks]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -303,6 +306,7 @@ paths:
         '404': { description: Не найдено }
     delete:
       summary: Удалить тестовое задание
+      description: Роль HR, ADMIN может удалять тестовые задания. Удаление тестового задания должно автоматически снимать его со всех кандидатов, которым оно было назначено (связь COMPLETES)
       tags: [TestTasks]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -318,6 +322,7 @@ paths:
   /v2/candidates:
     get:
       summary: Список кандидатов
+      description: Роль - любая ?????????
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -343,6 +348,7 @@ paths:
                 application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidate' } } }
     post:
       summary: Добавление кандидата
+      description: Роль HR, ADMIN. При добавлении кандидат должен быть связан с вакансией. Статус при добавлении всегда NEW
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -360,6 +366,7 @@ paths:
   /v2/candidates/{id}:
     get:
       summary: Получить кандидата по ID
+      description: Роль - любая
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -375,6 +382,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Редактирование кандидата (включая статус и назначение теста)
+      description: Роль HR. Статус кандидата меняется по логике: NEW → TEST → INTERVIEW → OFFER → HIRED или REJECTED (на любом этапе).
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -406,6 +414,7 @@ paths:
   /v2/candidates/import:
     post:
       summary: Массовый импорт кандидатов из CSV
+      description: Роль HR, ADMIN
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -432,8 +441,10 @@ paths:
 
   # ==================== Interviews ====================
   /v2/interviews:
+  
     post:
       summary: Назначить интервью кандидату
+      description: Роль HR, ADMIN. Назначение интервью должно создавать связь ASSIGNED_FOR между кандидатом и интервью, а также связь INTERVIEWING между интервью и тех. специалистом. При назначении интервью статус кандидата автоматически меняется на INTERVIEW.
       tags: [Interviews]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -458,7 +469,7 @@ paths:
   /v2/interviews/{id}:
     get:
       summary: Получить информацию об интервью
-      tags: [Interviews]
+      description: Роль - любая
       security: [{ BearerAuth: [] }]
       parameters:
         - name: id
@@ -473,6 +484,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Добавить фидбек по интервью (связь INTERVIEWING)
+      description: Роль TECH_SPEC. Фидбэк + INTERVIEW_PASSED или INTERVIEW_FAILED
       tags: [Interviews]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -502,6 +514,7 @@ paths:
   /v2/offers:
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
+      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER.
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -520,6 +533,7 @@ paths:
   /v2/offers/{id}:
     get:
       summary: Получить оффер по ID
+      description: Роль MANAGER, HR, ADMIN может получать офферы. 
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -535,6 +549,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
+      description: Роль MANAGER
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -564,6 +579,7 @@ paths:
   /v2/analytics/statistics:
     get:
       summary: Данные для диаграммы
+      description: Роль - любая
       tags: [Analytics]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -593,6 +609,7 @@ paths:
   /v2/admin/backup:
     get:
       summary: Экспорт всей системы (включая test_tasks)
+      description: Роль ADMIN
       tags: [Admin]
       security: [{ BearerAuth: [] }]
       responses:
@@ -606,6 +623,7 @@ paths:
   /v2/admin/restore:
     post:
       summary: Импорт всей системы из бэкапа
+      description: Роль ADMIN
       tags: [Admin]
       security: [{ BearerAuth: [] }]
       requestBody:
