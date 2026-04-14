@@ -99,6 +99,47 @@ components:
         offers: { type: array, items: { $ref: '#/components/schemas/Offer' } }
 
 paths:
+  # /v2/users:
+  #   get:
+  #     summary: Список пользователей
+  #     description: Роль ADMIN. Фильтрация по всем полям.
+  #     tags: [Users]
+  #     security: [{ BearerAuth: [] }]
+  #     parameters:
+  #       - name: full_name
+  #         in: query
+  #         schema: { type: string }
+  #         description: Поиск по подстроке (регистронезависимый)
+  #       - name: email
+  #         in: query
+  #         schema: { type: string, format: email }
+  #         description: Поиск по подстроке
+  #       - name: role
+  #         in: query
+  #         schema: { type: string, enum: [ADMIN, HR, TECH_SPEC, MANAGER] }
+  #       - name: limit
+  #         in: query
+  #         schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+  #       - name: offset
+  #         in: query
+  #         schema: { type: integer, default: 0, minimum: 0 }
+  #       - name: sort_by
+  #         in: query
+  #         schema: { type: string, enum: [full_name, email, role, created_at], default: full_name }
+  #       - name: sort_order
+  #         in: query
+  #         schema: { type: string, enum: [asc, desc], default: asc }
+  #     responses:
+  #       '200':
+  #         description: OK
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total: { type: integer }
+  #                 items: { type: array, items: { $ref: '#/components/schemas/User' } }
+  #       '403': { description: Требуются права ADMIN }
   # ==================== Auth ====================
   /v2/auth/register:
     post:
@@ -158,15 +199,54 @@ paths:
         - name: title
           in: query
           schema: { type: string }
+          description: Поиск по подстроке
+        - name: description_contains
+          in: query
+          schema: { type: string }
+          description: Поиск по описанию (подстрока)
         - name: status
           in: query
           schema: { type: string, enum: [OPEN, CLOSED] }
+        - name: created_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Unix timestamp (включительно)
+        - name: created_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Unix timestamp (включительно)
+        - name: closed_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: closed_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: has_test_tasks
+          in: query
+          schema: { type: boolean }
+          description: Фильтр по наличию тестовых заданий
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [title, status, created_at, closed_at], default: created_at }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
       responses:
         '200':
           description: OK
           content:
             application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/Vacancy' } }
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/Vacancy' } }
 
     post:
       summary: Создание вакансии
@@ -235,20 +315,51 @@ paths:
   /v2/test-tasks:
     get:
       summary: Список тестовых заданий
-      description: Роль HR, ADMIN ?????????????
       tags: [TestTasks]
       security: [{ BearerAuth: [] }]
       parameters:
+        - name: title
+          in: query
+          schema: { type: string }
+          description: Поиск по подстроке
         - name: vacancy_id
           in: query
           schema: { type: string, format: uuid }
-          description: Фильтр по вакансии (связь TEST_FOR)
+        - name: vacancy_title
+          in: query
+          schema: { type: string }
+          description: Поиск по названию вакансии (связанная сущность)
+        - name: test_task_url_contains
+          in: query
+          schema: { type: string }
+          description: Поиск по ссылке (подстрока)
+        - name: has_assigned_candidates
+          in: query
+          schema: { type: boolean }
+          description: Есть ли кандидаты с этим тестовым
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [title, vacancy_id, created_at], default: title }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: asc }
       responses:
         '200':
-            description: OK
-            content: 
-                application/json:  
-                    schema: { type: array, items: { $ref: '#/components/schemas/TestTask' } }
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/TestTask' } }
+
     post:
       summary: Создать тестовое задание для вакансии
       description: Роль HR. Тестовое задание должно быть связано с вакансией (vacancy_id), для которой оно предназначено (связь TEST_FOR). В одной вакансии может быть несколько тестовых заданий
@@ -326,6 +437,7 @@ paths:
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       parameters:
+        # Текстовые поля
         - name: full_name
           in: query
           schema: { type: string }
@@ -335,17 +447,68 @@ paths:
         - name: phone
           in: query
           schema: { type: string }
+        - name: resume_url_contains
+          in: query
+          schema: { type: string }
+        # Статус
         - name: status
           in: query
           schema: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+        # Связи
         - name: vacancy_id
           in: query
           schema: { type: string, format: uuid }
+        - name: vacancy_title
+          in: query
+          schema: { type: string }
+          description: Поиск по названию вакансии
+        - name: test_task_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: test_task_title
+          in: query
+          schema: { type: string }
+          description: Поиск по названию тестового задания
+        # Диапазоны (если будут числовые поля)
+        - name: created_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: created_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+        # Составные фильтры
+        - name: has_interview
+          in: query
+          schema: { type: boolean }
+          description: Есть ли назначенное интервью
+        - name: has_offer
+          in: query
+          schema: { type: boolean }
+          description: Есть ли оффер
+        # Пагинация и сортировка
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [full_name, email, status, created_at, updated_at], default: created_at }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
       responses:
-        '200': 
-            description: OK
-            content: 
-                application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Candidate' } } }
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/Candidate' } }
+
     post:
       summary: Добавление кандидата
       description: Роль HR, ADMIN. При добавлении кандидат должен быть связан с вакансией. Статус при добавлении всегда NEW
@@ -382,7 +545,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Редактирование кандидата (включая статус и назначение теста)
-      description: Роль HR. Статус кандидата меняется по логике: NEW → TEST → INTERVIEW → OFFER → HIRED или REJECTED (на любом этапе).
+      description: Роль HR.
       tags: [Candidates]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -441,7 +604,60 @@ paths:
 
   # ==================== Interviews ====================
   /v2/interviews:
-  
+    get:
+      parameters:
+        # Прямые поля
+        - name: candidate_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: candidate_name
+          in: query
+          schema: { type: string }
+          description: Поиск по имени кандидата
+        - name: tech_spec_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: tech_spec_name
+          in: query
+          schema: { type: string }
+          description: Поиск по имени техспециалиста
+        - name: result
+          in: query
+          schema: { type: string, enum: [AWAIT_INTERVIEW, INTERVIEW_PASSED, INTERVIEW_FAILED] }
+        - name: feedback_contains
+          in: query
+          schema: { type: string }
+          description: Поиск по фидбеку (подстрока)
+        # Диапазон дат
+        - name: scheduled_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: scheduled_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+        # Пагинация и сортировка
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [scheduled_at, result, candidate_name, tech_spec_name], default: scheduled_at }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/Interview' } }
     post:
       summary: Назначить интервью кандидату
       description: Роль HR, ADMIN. Назначение интервью должно создавать связь ASSIGNED_FOR между кандидатом и интервью, а также связь INTERVIEWING между интервью и тех. специалистом. При назначении интервью статус кандидата автоматически меняется на INTERVIEW.
@@ -512,6 +728,64 @@ paths:
 
   # ==================== Offers ====================
   /v2/offers:
+    get:
+      summary: Список интервью
+      description: Роль HR, ADMIN, TECH_SPEC (только свои), MANAGER (только по своим вакансиям)
+      tags: [Interviews]
+      security: [{ BearerAuth: [] }]
+      parameters:
+        # Прямые поля
+        - name: candidate_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: candidate_name
+          in: query
+          schema: { type: string }
+          description: Поиск по имени кандидата
+        - name: tech_spec_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: tech_spec_name
+          in: query
+          schema: { type: string }
+          description: Поиск по имени техспециалиста
+        - name: result
+          in: query
+          schema: { type: string, enum: [AWAIT_INTERVIEW, INTERVIEW_PASSED, INTERVIEW_FAILED] }
+        - name: feedback_contains
+          in: query
+          schema: { type: string }
+          description: Поиск по фидбеку (подстрока)
+        # Диапазон дат
+        - name: scheduled_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: scheduled_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+        # Пагинация и сортировка
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0, minimum: 0 }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [scheduled_at, result, candidate_name, tech_spec_name], default: scheduled_at }
+        - name: sort_order
+          in: query
+          schema: { type: string, enum: [asc, desc], default: desc }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  items: { type: array, items: { $ref: '#/components/schemas/Interview' } }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
       description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER.
