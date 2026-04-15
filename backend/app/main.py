@@ -1,29 +1,20 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from app.database import db
-from app.routes import router
+from app.core.database import lifespan
+from app.core.config import settings
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    db.connect()
-    yield
-    # Shutdown
-    db.close()
+# TODO: импортировать роутеры позже
+# from app.api.v1.users.routes import router as users_router
+# from app.api.v1.orders.routes import router as orders_router
 
-app = FastAPI(lifespan=lifespan)
-
-app.include_router(router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="NoSQL CRM Backend",
+    lifespan=lifespan
 )
 
-@app.get("/")
-def root():
-    return {"message": "CRM backend is running"}
+# TODO: Подключение роутеров
+# app.include_router(users_router, prefix=f"{settings.api_v1_prefix}/users", tags=["users"])
+# app.include_router(orders_router, prefix=f"{settings.api_v1_prefix}/orders", tags=["orders"])
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
