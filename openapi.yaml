@@ -786,7 +786,7 @@ paths:
       tags: [Interviews]
       description: Фильтрация по основным параметрам
       security: [{ BearerAuth: [] }]
-      parameters:# Прямые поля Offer
+      parameters:
         - name: salary_from
           in: query
           schema: { type: integer, minimum: 0 }
