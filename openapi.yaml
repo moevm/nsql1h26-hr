@@ -783,7 +783,7 @@ paths:
   /v2/offers:
     get:
       summary: Список офферов
-      tags: [Interviews]
+      tags: [Offers]
       description: Фильтрация по основным параметрам
       security: [{ BearerAuth: [] }]
       parameters:
@@ -908,7 +908,7 @@ paths:
         '200':
             description: OK
             content: 
-                application/json: { schema: { $ref: '#/components/schemas/OfferCreate' } }
+                application/json: { schema: { $ref: '#/components/schemas/OfferResponse' } }
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
