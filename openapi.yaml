@@ -786,49 +786,84 @@ paths:
       tags: [Interviews]
       description: Фильтрация по основным параметрам
       security: [{ BearerAuth: [] }]
-      parameters:
-        # Прямые поля
+      parameters:# Прямые поля Offer
+        - name: salary_from
+          in: query
+          schema: { type: integer, minimum: 0 }
+          description: Минимальная зарплата
+        - name: salary_to
+          in: query
+          schema: { type: integer, minimum: 0 }
+          description: Максимальная зарплата
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, APPROVED_MNG, REJECTED_MNG, APPROVED_CND, REJECTED_CNF] }
+          description: Статус оффера
+        - name: start_at_from
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Дата выхода на работу от (Unix timestamp)
+        - name: start_at_to
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Дата выхода на работу до (Unix timestamp)
         - name: candidate_id
           in: query
           schema: { type: string, format: uuid }
         - name: candidate_name
           in: query
           schema: { type: string }
-          description: Поиск по имени кандидата
-        - name: tech_spec_id
+          description: Поиск по имени кандидата (подстрока, регистронезависимый)
+        - name: candidate_email
+          in: query
+          schema: { type: string, format: email }
+          description: Поиск по email кандидата (подстрока)
+        - name: candidate_status
+          in: query
+          schema: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+          description: Статус кандидата
+        
+        - name: vacancy_id
           in: query
           schema: { type: string, format: uuid }
-        - name: tech_spec_name
+        - name: vacancy_title
           in: query
           schema: { type: string }
-          description: Поиск по имени техспециалиста
-        - name: result
+          description: Поиск по названию вакансии (подстрока)
+        - name: vacancy_status
           in: query
-          schema: { type: string, enum: [AWAIT_INTERVIEW, INTERVIEW_PASSED, INTERVIEW_FAILED] }
-        - name: feedback_contains
+          schema: { type: string, enum: [OPEN, CLOSED] }
+        
+        - name: created_by
+          in: query
+          schema: { type: string, format: uuid }
+          description: ID менеджера, создавшего оффер
+        - name: created_by_name
           in: query
           schema: { type: string }
-          description: Поиск по фидбеку (подстрока)
-        # Диапазон дат
-        - name: scheduled_at_from
+          description: Поиск по имени создателя (подстрока)
+        
+        - name: created_at_from
           in: query
           schema: { type: integer, format: int64 }
-        - name: scheduled_at_to
+        - name: created_at_to
           in: query
           schema: { type: integer, format: int64 }
-        # Пагинация и сортировка
+        
         - name: limit
           in: query
           schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
         - name: offset
           in: query
           schema: { type: integer, default: 0, minimum: 0 }
+        
         - name: sort_by
           in: query
-          schema: { type: string, enum: [scheduled_at, result, candidate_name, tech_spec_name], default: scheduled_at }
+          schema: { type: string, enum: [salary, start_at, status, created_at, candidate_name, vacancy_title], default: created_at }
         - name: sort_order
           in: query
           schema: { type: string, enum: [asc, desc], default: desc }
+      
       responses:
         '200':
           description: OK
@@ -838,7 +873,8 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/InterviewResponse' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/OfferResponse' } }
+        '403': { description: Недостаточно прав (требуется MANAGER, HR или ADMIN) }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
       description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER.
