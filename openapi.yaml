@@ -20,16 +20,34 @@ components:
   schemas:
     # --- Сущности (полностью по модели данных) ---
 
-    User:
+    UserCreate:
+      type: object
+      properties:
+        email: { type: string, format: email, example: "hr@company.ru" }
+        full_name: { type: string, minLength: 3, maxLength: 150, example: "Екатерина Максимова" }
+        role: { type: string, enum: [ADMIN, HR, TECH_SPEC, MANAGER], example: "HR" }
+      required: [email, full_name, role]
+
+    UserResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "user_id" }
         email: { type: string, format: email, example: "hr@company.ru" }
         full_name: { type: string, minLength: 3, maxLength: 150, example: "Екатерина Максимова" }
         role: { type: string, enum: [ADMIN, HR, TECH_SPEC, MANAGER], example: "HR" }
-      required: [email, full_name, role]
+      required: [id, email, full_name, role]
 
-    Vacancy:
+    VacancyCreate:
+      type: object
+      properties:
+        title: { type: string, maxLength: 100 }
+        description: { type: string, maxLength: 5000 }
+        status: { type: string, enum: [OPEN, CLOSED], default: OPEN }
+        created_at: { type: integer, format: int64, description: "Unix timestamp" }
+        closed_at: { type: integer, format: int64, description: "Unix timestamp, только если статус CLOSED" }
+      required: [title, description]
+
+    VacancyResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "vacancy_id" }
@@ -38,9 +56,18 @@ components:
         status: { type: string, enum: [OPEN, CLOSED], default: OPEN }
         created_at: { type: integer, format: int64, description: "Unix timestamp" }
         closed_at: { type: integer, format: int64, description: "Unix timestamp, только если статус CLOSED" }
-      required: [title, description, created_at]
+      required: [id, title, description, status, created_at]
 
-    TestTask:
+    TestTaskCreate:
+      type: object
+      description: "Тестовое задание, прикрепляется к вакансии"
+      properties:
+        title: { type: string, maxLength: 100, example: "Анализ требований к API" }
+        test_task_url: { type: string, format: uri, description: "Ссылка на условия задания" }
+        vacancy_id: { type: string, format: uuid, description: "Связь TEST_FOR: TestTask → Vacancy" }
+      required: [title, test_task_url, vacancy_id]
+
+    TestTaskResponse:
       type: object
       description: "Тестовое задание, прикрепляется к вакансии"
       properties:
@@ -48,9 +75,21 @@ components:
         title: { type: string, maxLength: 100, example: "Анализ требований к API" }
         test_task_url: { type: string, format: uri, description: "Ссылка на условия задания" }
         vacancy_id: { type: string, format: uuid, description: "Связь TEST_FOR: TestTask → Vacancy" }
-      required: [title, test_task_url, vacancy_id]
+      required: [id, title, test_task_url, vacancy_id]
 
-    Candidate:
+    CandidateCreate:
+      type: object
+      properties:
+        full_name: { type: string, maxLength: 150 }
+        email: { type: string, format: email }
+        phone: { type: string, pattern: '^\+7\d{10}$' }
+        resume_url: { type: string, format: uri }
+        status: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+        vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
+        test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
+      required: [full_name, email, phone, status]
+
+    CandidateResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "candidate_id" }
@@ -61,9 +100,20 @@ components:
         status: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
         vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
         test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
-      required: [full_name, email, phone, status]
+      required: [id, full_name, email, phone, status]
 
-    Interview:
+    InterviewCreate:
+      type: object
+      properties:
+        candidate_id: { type: string, format: uuid, description: "Связь ASSIGNED_FOR: Candidate → Interview" }
+        tech_spec_id: { type: string, format: uuid, description: "Связь INTERVIEWING: User (TECH_SPEC) → Interview" }
+        scheduled_at: { type: integer, format: int64, description: "Unix timestamp" }
+        zoom_url: { type: string, format: uri }
+        feedback: { type: string, maxLength: 2000 }
+        result: { type: string, enum: [AWAIT_INTERVIEW, INTERVIEW_PASSED, INTERVIEW_FAILED], default: AWAIT_INTERVIEW }
+      required: [candidate_id, tech_spec_id, scheduled_at]
+
+    InterviewResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "interview_id" }
@@ -73,9 +123,20 @@ components:
         zoom_url: { type: string, format: uri }
         feedback: { type: string, maxLength: 2000 }
         result: { type: string, enum: [AWAIT_INTERVIEW, INTERVIEW_PASSED, INTERVIEW_FAILED], default: AWAIT_INTERVIEW }
-      required: [candidate_id, tech_spec_id, scheduled_at]
+      required: [id, candidate_id, tech_spec_id, scheduled_at]
 
-    Offer:
+    OfferCreate:
+      type: object
+      properties:
+        candidate_id: { type: string, format: uuid, description: "Связь OFFERED: Offer → Candidate" }
+        vacancy_id: { type: string, format: uuid, description: "Связь CLOSES: Offer → Vacancy" }
+        created_by: { type: string, format: uuid, description: "Связь CREATES: User (MANAGER) → Offer" }
+        salary: { type: integer, minimum: 0, example: 250000 }
+        start_at: { type: integer, format: int64, description: "Unix timestamp — дата выхода" }
+        status: { type: string, enum: [PENDING, APPROVED_MNG, REJECTED_MNG, APPROVED_CND, REJECTED_CNF], default: PENDING }
+      required: [candidate_id, vacancy_id, created_by, salary, start_at]
+
+    OfferResponse:
       type: object
       properties:
         id: { type: string, format: uuid, description: "offer_id" }
@@ -85,18 +146,18 @@ components:
         salary: { type: integer, minimum: 0, example: 250000 }
         start_at: { type: integer, format: int64, description: "Unix timestamp — дата выхода" }
         status: { type: string, enum: [PENDING, APPROVED_MNG, REJECTED_MNG, APPROVED_CND, REJECTED_CNF], default: PENDING }
-      required: [candidate_id, vacancy_id, created_by, salary, start_at]
+      required: [id, candidate_id, vacancy_id, created_by, salary, start_at, status]
 
     SystemBackup:
       type: object
       required: [users, vacancies, test_tasks, candidates, interviews, offers]
       properties:
-        users: { type: array, items: { $ref: '#/components/schemas/User' } }
-        vacancies: { type: array, items: { $ref: '#/components/schemas/Vacancy' } }
-        test_tasks: { type: array, items: { $ref: '#/components/schemas/TestTask' } }
-        candidates: { type: array, items: { $ref: '#/components/schemas/Candidate' } }
-        interviews: { type: array, items: { $ref: '#/components/schemas/Interview' } }
-        offers: { type: array, items: { $ref: '#/components/schemas/Offer' } }
+        users: { type: array, items: { $ref: '#/components/schemas/UserResponse' } }
+        vacancies: { type: array, items: { $ref: '#/components/schemas/VacancyResponse' } }
+        test_tasks: { type: array, items: { $ref: '#/components/schemas/TestTaskResponse' } }
+        candidates: { type: array, items: { $ref: '#/components/schemas/CandidateResponse' } }
+        interviews: { type: array, items: { $ref: '#/components/schemas/InterviewResponse' } }
+        offers: { type: array, items: { $ref: '#/components/schemas/OfferResponse' } }
 
 paths:
   # /v2/users:
@@ -149,16 +210,9 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                full_name: { type: string, minLength: 3 }
-                email: { type: string, format: email }
-                password: { type: string, minLength: 6 }
-                role: { type: string, enum: [HR, TECH_SPEC, MANAGER] }
-              required: [full_name, email, password, role]
+            schema: { $ref: '#/components/schemas/UserCreate' }
       responses:
-        '201': { description: Пользователь создан, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        '201': { description: Пользователь создан, content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } } }
         '400': { description: Неверные данные }
         '409': { description: Email уже существует }
 
@@ -186,7 +240,7 @@ paths:
                 properties:
                   token: { type: string }
                   role: { type: string, enum: [ADMIN, HR, TECH_SPEC, MANAGER] }
-                  user: { $ref: '#/components/schemas/User' }
+                  user: { $ref: '#/components/schemas/UserResponse' }
         '401': { description: Неверные учётные данные }
 
   # ==================== Vacancies ====================
@@ -246,7 +300,7 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/Vacancy' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/VacancyResponse' } }
 
     post:
       summary: Создание вакансии
@@ -257,13 +311,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Vacancy' }
+            schema: { $ref: '#/components/schemas/VacancyCreate' }
       responses:
         '201':
           description: Вакансия создана
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Vacancy' }
+              schema: { $ref: '#/components/schemas/VacancyResponse' }
   /v2/vacancies/{id}:
     get:
       summary: Получить вакансию по ID
@@ -280,12 +334,13 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Vacancy' }
+              schema: { $ref: '#/components/schemas/VacancyResponse' }
         '404': 
             description: Не найдено
     patch:
       summary: Обновить вакансию
       description: Роль HR, ADMIN может обновлять вакансии.
+      tags: [Vacancies]
       security: [{ BearerAuth: [] }]
       parameters:
         - name: id
@@ -307,7 +362,7 @@ paths:
           description: Обновлено
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Vacancy' }
+              schema: { $ref: '#/components/schemas/VacancyResponse' }
         '404': 
             description: Не найдено
 
@@ -358,22 +413,23 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/TestTask' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/TestTaskResponse' } }
 
     post:
       summary: Создать тестовое задание для вакансии
+      tags: [TestTasks]
       description: Роль HR. Тестовое задание должно быть связано с вакансией (vacancy_id), для которой оно предназначено (связь TEST_FOR). В одной вакансии может быть несколько тестовых заданий
       security: [{ BearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/TestTask' }
+            schema: { $ref: '#/components/schemas/TestTaskCreate' }
       responses:
         '201': 
              description: Создано тестовое
              content: 
-                application/json: { schema: { $ref: '#/components/schemas/TestTask' } } 
+                application/json: { schema: { $ref: '#/components/schemas/TestTaskResponse' } } 
         '404': { description: Вакансия не найдена }
 
   /v2/test-tasks/{id}:
@@ -390,7 +446,7 @@ paths:
       responses:
         '200': 
             description: OK
-            content: { application/json: { schema: { $ref: '#/components/schemas/TestTask' } } }
+            content: { application/json: { schema: { $ref: '#/components/schemas/TestTaskResponse' } } }
         '404': { description: Не найдено }
     patch:
       summary: Обновить тестовое задание
@@ -413,7 +469,7 @@ paths:
       responses:
         '200': 
             description: OK
-            content: { application/json: { schema: { $ref: '#/components/schemas/TestTask' } } }
+            content: { application/json: { schema: { $ref: '#/components/schemas/TestTaskResponse' } } }
         '404': { description: Не найдено }
     delete:
       summary: Удалить тестовое задание
@@ -507,7 +563,7 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/Candidate' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/CandidateResponse' } }
 
     post:
       summary: Добавление кандидата
@@ -518,12 +574,12 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Candidate' }
+            schema: { $ref: '#/components/schemas/CandidateCreate' }
       responses:
         '201':
             description: OK
             content: 
-                application/json: { schema: { $ref: '#/components/schemas/Candidate' } } 
+                application/json: { schema: { $ref: '#/components/schemas/CandidateResponse' } } 
         '400': { description: Vacancy не найдена или TestTask не принадлежит Vacancy }
 
   /v2/candidates/{id}:
@@ -541,7 +597,7 @@ paths:
         '200':  
             description: OK
             content: 
-                application/json: { schema: { $ref: '#/components/schemas/Candidate' } }
+                application/json: { schema: { $ref: '#/components/schemas/CandidateResponse' } }
         '404': { description: Не найдено }
     patch:
       summary: Редактирование кандидата (включая статус и назначение теста)
@@ -570,7 +626,7 @@ paths:
         '200': 
             description: OK
             content: 
-                application/json: { schema: { $ref: '#/components/schemas/Candidate' } }
+                application/json: { schema: { $ref: '#/components/schemas/CandidateResponse' } }
         '400': { description: Некорректный переход статуса или test_task_id не принадлежит vacancy_id }
         '404': { description: Не найдено }
 
@@ -605,6 +661,8 @@ paths:
   # ==================== Interviews ====================
   /v2/interviews:
     get:
+      summary: Список интервью
+      tags: [Interviews]
       parameters:
         # Прямые поля
         - name: candidate_id
@@ -657,7 +715,7 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/Interview' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/InterviewResponse' } }
     post:
       summary: Назначить интервью кандидату
       description: Роль HR, ADMIN. Назначение интервью должно создавать связь ASSIGNED_FOR между кандидатом и интервью, а также связь INTERVIEWING между интервью и тех. специалистом. При назначении интервью статус кандидата автоматически меняется на INTERVIEW.
@@ -667,25 +725,20 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                candidate_id: { type: string, format: uuid }
-                tech_spec_id: { type: string, format: uuid }
-                scheduled_at: { type: integer, format: int64 }
-              required: [candidate_id, tech_spec_id, scheduled_at]
+            schema: { $ref: '#/components/schemas/InterviewCreate' }
       responses:
         '201':
           description: Интервью создано, статус кандидата автоматически меняется на INTERVIEW
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Interview' }
+              schema: { $ref: '#/components/schemas/InterviewResponse' }
         '400': { description: Кандидат не в статусе TEST или tech_spec не найден }
 
   /v2/interviews/{id}:
     get:
       summary: Получить информацию об интервью
       description: Роль - любая
+      tags: [Interviews]
       security: [{ BearerAuth: [] }]
       parameters:
         - name: id
@@ -696,7 +749,7 @@ paths:
         '200': 
             description: OK
             content:  
-                application/json: { schema: { $ref: '#/components/schemas/Interview' } }
+                application/json: { schema: { $ref: '#/components/schemas/InterviewResponse' } }
         '404': { description: Не найдено }
     patch:
       summary: Добавить фидбек по интервью (связь INTERVIEWING)
@@ -723,15 +776,15 @@ paths:
           description: Фидбек сохранён. При INTERVIEW_PASSED статус кандидата → OFFER
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Interview' }
+              schema: { $ref: '#/components/schemas/InterviewResponse' }
         '404': { description: Интервью не найдено }
 
   # ==================== Offers ====================
   /v2/offers:
     get:
-      summary: Список интервью
-      description: Роль HR, ADMIN, TECH_SPEC (только свои), MANAGER (только по своим вакансиям)
+      summary: Список офферов
       tags: [Interviews]
+      description: Фильтрация по основным параметрам
       security: [{ BearerAuth: [] }]
       parameters:
         # Прямые поля
@@ -785,7 +838,7 @@ paths:
                 type: object
                 properties:
                   total: { type: integer }
-                  items: { type: array, items: { $ref: '#/components/schemas/Interview' } }
+                  items: { type: array, items: { $ref: '#/components/schemas/InterviewResponse' } }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
       description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER.
@@ -795,13 +848,13 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/Offer' }
+            schema: { $ref: '#/components/schemas/OfferCreate' }
       responses:
         '201':
           description: Оффер создан, статус кандидата → OFFER
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Offer' }
+              schema: { $ref: '#/components/schemas/OfferResponse' }
         '400': { description: Кандидат не в статусе INTERVIEW или уже есть активный оффер }
 
   /v2/offers/{id}:
@@ -819,7 +872,7 @@ paths:
         '200':
             description: OK
             content: 
-                application/json: { schema: { $ref: '#/components/schemas/Offer' } }
+                application/json: { schema: { $ref: '#/components/schemas/OfferCreate' } }
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
@@ -845,7 +898,7 @@ paths:
           description: Статус обновлён. При APPROVED_CND статус кандидата → HIRED, вакансия → CLOSED
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/Offer' }
+              schema: { $ref: '#/components/schemas/OfferResponse' }
         '400': { description: Некорректная последовательность статусов }
         '404': { description: Оффер не найден }
 
