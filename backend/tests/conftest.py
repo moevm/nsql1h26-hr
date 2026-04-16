@@ -2,7 +2,6 @@ import pytest
 from neo4j import AsyncGraphDatabase
 from testcontainers.neo4j import Neo4jContainer
 from httpx import AsyncClient, ASGITransport
-import asyncio
 
 from app.main import app
 from app.core.database import get_db

@@ -1,5 +1,6 @@
 from datetime import datetime
 from fastapi import status
+from uuid import UUID
 from app.repositories.vacancy_repo import VacancyRepository
 from app.models.vacancy import VacancyCreate, VacancyResponse, VacancyStatus
 from app.core.exceptions import AppError
@@ -20,4 +21,11 @@ class VacancyService:
         if vacancy_data.created_at is None:
             vacancy_data.created_at = datetime.now()
         vacancy_dict = await self.vacancy_repo.create_vacancy(vacancy_data)
+        return VacancyResponse(**vacancy_dict)
+
+    async def get_vacancy_by_id(self,
+                                vacancy_id: UUID):
+        vacancy_dict = await self.vacancy_repo.get_vacancy_by_id(vacancy_id)
+        if vacancy_dict is None:
+            raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
         return VacancyResponse(**vacancy_dict)
