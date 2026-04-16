@@ -28,3 +28,10 @@ class VacancyResponse(BaseModel):
     closed_at: UnixTimestamp | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class VacancyPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, min_length=1, max_length=5000)
+    status: VacancyStatus | None = VacancyStatus.OPEN
+    closed_at: UnixTimestamp | None = None

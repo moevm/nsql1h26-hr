@@ -29,7 +29,7 @@ class VacancyRepository:
             record = await result.single()
             return record["vacancy_data"] if record else None
 
-    async def get_vacancy_by_id(self, vacancy_id: UUID):
+    async def get_vacancy_by_id(self, vacancy_id: UUID) -> dict:
         async with self.driver.session() as session:
             result = await session.run(
                 """
@@ -40,6 +40,24 @@ class VacancyRepository:
                 } AS vacancy_data
                 """,
                 id=str(vacancy_id)
+                )
+            record = await result.single()
+            return record["vacancy_data"] if record else None
+
+    async def patch_vacancy(self, vacancy_id: UUID, data: dict) -> dict:
+        async with self.driver.session() as session:
+            new_status = data.pop("status", None)
+            query = "MATCH (v:Vacancy {id: $id}) SET v += $props "
+            if new_status:
+                query += f" REMOVE v:OPEN, v:CLOSED SET v:{new_status} "
+            query += """
+                 RETURN v {
+            .*,
+            status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
+                } AS vacancy_data
+                """
+            result = await session.run(
+                query, id=str(vacancy_id), props=data
                 )
             record = await result.single()
             return record["vacancy_data"] if record else None

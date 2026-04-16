@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import status
 from uuid import UUID
 from app.repositories.vacancy_repo import VacancyRepository
-from app.models.vacancy import VacancyCreate, VacancyResponse, VacancyStatus
+from app.models.vacancy import VacancyCreate, VacancyResponse, VacancyStatus, VacancyPatch
 from app.core.exceptions import AppError
 
 
@@ -29,3 +29,20 @@ class VacancyService:
         if vacancy_dict is None:
             raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
         return VacancyResponse(**vacancy_dict)
+
+    async def patch_vacancy(self, vacancy_id: UUID, vacancy_data: VacancyPatch) -> VacancyResponse:
+        if vacancy_data.status == VacancyStatus.OPEN and vacancy_data.closed_at is not None:
+            raise AppError("Invalid vacancy status",
+                           status.HTTP_400_BAD_REQUEST)
+        if vacancy_data.status is None and vacancy_data.closed_at is not None:
+            vacancy_data.status = VacancyStatus.CLOSED
+        if vacancy_data.status == VacancyStatus.CLOSED and vacancy_data.closed_at is None:
+            vacancy_data.closed_at = datetime.now()
+        data_dict = vacancy_data.model_dump(exclude_unset=True)
+        vacancy = await self.vacancy_repo.get_vacancy_by_id(vacancy_id)
+        if not vacancy:
+            raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
+        if not data_dict:
+            return VacancyResponse(**vacancy)
+        vacancy = await self.vacancy_repo.patch_vacancy(vacancy_id, data_dict)
+        return VacancyResponse(**vacancy)

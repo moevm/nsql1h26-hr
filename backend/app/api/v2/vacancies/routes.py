@@ -5,7 +5,7 @@ from uuid import UUID
 from app.core.database import get_db
 from app.services.vacancy_service import VacancyService
 from app.repositories.vacancy_repo import VacancyRepository
-from app.models.vacancy import VacancyCreate, VacancyResponse
+from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyResponse
 from app.core.exceptions import AppError
 
 router = APIRouter()
@@ -38,6 +38,19 @@ async def get_vacancy_by_id(
     vacancy_service: VacancyService = Depends(get_vacancy_service)
 ):
     vacancy = await vacancy_service.get_vacancy_by_id(vacancy_id)
+    if not vacancy:
+        raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
+    return vacancy
+
+
+@router.patch("/{vacancy_id}",
+              response_model=VacancyResponse,
+              status_code=status.HTTP_200_OK)
+async def patch_vacancy(
+        vacancy_id: UUID,
+        patch_data: VacancyPatch,
+        vacancy_service: VacancyService = Depends(get_vacancy_service)):
+    vacancy = await vacancy_service.patch_vacancy(vacancy_id, patch_data)
     if not vacancy:
         raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
     return vacancy
