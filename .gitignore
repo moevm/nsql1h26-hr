@@ -31,3 +31,6 @@ yarn-error.log*
 # out of order vscode stuff
 .devcontainer
 .vscode
+
+# python env
+.venv

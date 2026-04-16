@@ -4,3 +4,4 @@ neo4j
 python-dotenv
 pydantic
 pydantic-settings
+pydantic-extra-types[phone-numbers]

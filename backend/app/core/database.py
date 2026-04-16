@@ -4,7 +4,8 @@ from typing import AsyncGenerator, Optional
 from fastapi import FastAPI
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
-from app.core.config import settings
+from config import settings
+
 
 class Neo4jDB:
     driver: Optional[AsyncDriver] = None
@@ -29,12 +30,14 @@ class Neo4jDB:
             raise RuntimeError("Neo4j driver not initialized")
         return cls.driver
 
+
 # Lifespan менеджер для FastAPI
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
     await Neo4jDB.connect()
     yield
     await Neo4jDB.close()
+
 
 # Зависимость для получения драйвера
 async def get_db() -> AsyncDriver:

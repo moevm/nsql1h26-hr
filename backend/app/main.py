@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from app.core.database import lifespan
-from app.core.config import settings
+from core.database import lifespan
+from core.config import settings
 
 # TODO: импортировать роутеры позже
 # from app.api.v1.users.routes import router as users_router
