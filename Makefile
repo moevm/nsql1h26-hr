@@ -1,4 +1,6 @@
-.PHONY: up down clean front-logs back-logs swagger-up swagger-down
+.PHONY: up down clean front-logs back-logs swagger-up swagger-down tests
+
+PYTEST_FLAGS = -v --tb=short
 
 up:
 	docker compose up -d --build
@@ -20,3 +22,6 @@ swagger-up:
 
 swagger-stop:
 	docker compose stop swagger-service
+
+tests:
+	cd backend && python3 -m pytest tests/ $(PYTEST_FLAGS)
