@@ -1,6 +1,7 @@
 from enum import StrEnum
 from uuid import UUID
-from pydantic import BaseModel, NonNegativeInt
+from pydantic import BaseModel, NonNegativeInt, ConfigDict
+from app.models.unix_timestamp import UnixTimestamp
 
 
 class OfferStatus(StrEnum):
@@ -16,8 +17,10 @@ class OfferCreate(BaseModel):
     vacancy_id: UUID
     created_by: UUID
     salary: NonNegativeInt
-    start_at: int
+    start_at: UnixTimestamp
     status: OfferStatus | None = OfferStatus.PENDING
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OfferResponse(BaseModel):
@@ -26,5 +29,7 @@ class OfferResponse(BaseModel):
     vacancy_id: UUID
     created_by: UUID
     salary: NonNegativeInt
-    start_at: int
+    start_at: UnixTimestamp
     status: OfferStatus = OfferStatus.PENDING
+
+    model_config = ConfigDict(from_attributes=True)

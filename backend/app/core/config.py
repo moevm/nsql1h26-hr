@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     neo4j_database: str = Field("neo4j", env="NEO4J_DATABASE")
 
     # API
-    api_v1_prefix: str = "/api/v1"
+    api_prefix: str = "/api/v2"
 
     class Config:
         env_file = ".env"

@@ -1,6 +1,6 @@
 from enum import StrEnum
 from uuid import UUID
-from pydantic import BaseModel, Field, EmailStr, HttpUrl
+from pydantic import BaseModel, Field, EmailStr, HttpUrl, ConfigDict
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
@@ -22,6 +22,8 @@ class CandidateCreate(BaseModel):
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class CandidateResponse(BaseModel):
     id: UUID
@@ -32,3 +34,5 @@ class CandidateResponse(BaseModel):
     status: CandidateStatus
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
+
+    model_config = ConfigDict(from_attributes=True)

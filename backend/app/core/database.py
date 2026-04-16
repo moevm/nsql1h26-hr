@@ -4,7 +4,7 @@ from typing import AsyncGenerator, Optional
 from fastapi import FastAPI
 from neo4j import AsyncDriver, AsyncGraphDatabase
 
-from config import settings
+from app.core.config import settings
 
 
 class Neo4jDB:
