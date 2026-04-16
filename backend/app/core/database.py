@@ -13,8 +13,8 @@ class Neo4jDB:
     @classmethod
     async def connect(cls) -> None:
         cls.driver = AsyncGraphDatabase.driver(
-            settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password)
+            settings.neo4j_uri, auth=(settings.neo4j_user,
+                                      settings.neo4j_password)
         )
         await cls.driver.verify_connectivity()
 
@@ -31,14 +31,14 @@ class Neo4jDB:
         return cls.driver
 
 
-# Lifespan менеджер для FastAPI
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator:
+    """Lifespan менеджер для FastAPI"""
     await Neo4jDB.connect()
     yield
     await Neo4jDB.close()
 
 
-# Зависимость для получения драйвера
 async def get_db() -> AsyncDriver:
+    """Зависимость для получения драйвера"""
     return Neo4jDB.get_driver()

@@ -1,5 +1,5 @@
-from neo4j import AsyncDriver, Record
-from app.models.vacancy import VacancyCreate, VacancyResponse
+from neo4j import AsyncDriver
+from app.models.vacancy import VacancyCreate
 
 
 class VacancyRepository:
@@ -17,8 +17,8 @@ class VacancyRepository:
                     created_at: $created_at
                 }})
                 RETURN v {{
-                    .*,
-                    status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
+            .*,
+            status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
                 }} AS vacancy_data
                 """,
                 title=vacancy_data.title,

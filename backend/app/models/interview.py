@@ -1,8 +1,8 @@
 from enum import StrEnum
 from uuid import UUID
 from pydantic import BaseModel, Field, HttpUrl, ConfigDict
-from pydantic_extra_types.phone_numbers import PhoneNumber
 from app.models.unix_timestamp import UnixTimestamp
+
 
 class InterviewResult(StrEnum):
     AWAIT_INTERVIEW = "AWAIT_INTERVIEW"
