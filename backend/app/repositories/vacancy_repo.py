@@ -97,7 +97,7 @@ class VacancyRepository:
 
             if filters.has_test_task is not None:
                 exists_condition = "" if filters["has_test_task"] else "NOT"
-                where_clauses.append(f"{exists_condition} EXISTS {{ (v)-[:HAS_TEST_TASK]->(:TestTask) }}")
+                where_clauses.append(f"{exists_condition} EXISTS {{ (:TestTask)-[:TEST_FOR]->(v) }}")
 
             where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
