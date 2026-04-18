@@ -7,6 +7,7 @@ from app.core.exceptions import AppError
 
 # Импорт роутеров
 from app.api.v2.vacancies.routes import router as vacancy_router
+from app.api.v2.test_tasks.routes import router as test_task_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -23,6 +24,11 @@ app.add_middleware(
 app.include_router(
     vacancy_router,
     prefix=f"{settings.api_prefix}/vacancies", tags=["Vacancies"]
+)
+
+app.include_router(
+    test_task_router,
+    prefix=f"{settings.api_prefix}/test-tasks", tags=["TestTasks"]
 )
 
 
