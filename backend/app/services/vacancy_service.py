@@ -2,7 +2,7 @@ from datetime import datetime
 from fastapi import status
 from uuid import UUID
 from app.repositories.vacancy_repo import VacancyRepository
-from app.models.vacancy import VacancyCreate, VacancyResponse, VacancyStatus, VacancyPatch
+from app.models.vacancy import VacancyCreate, VacancyResponse, VacancyStatus, VacancyPatch, VacancyFilter, VacancyFilterResponse
 from app.core.exceptions import AppError
 
 
@@ -46,3 +46,8 @@ class VacancyService:
             return VacancyResponse(**vacancy)
         vacancy = await self.vacancy_repo.patch_vacancy(vacancy_id, data_dict)
         return VacancyResponse(**vacancy)
+    
+
+    async def filter_vacancies(self, filters: VacancyFilter) -> VacancyFilterResponse:
+        vacancies = await self.vacancy_repo.filter_vacancies(filters)
+        return VacancyFilterResponse(**vacancies)

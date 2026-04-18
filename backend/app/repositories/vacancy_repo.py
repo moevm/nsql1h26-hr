@@ -1,6 +1,6 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.vacancy import VacancyCreate
+from app.models.vacancy import VacancyCreate, VacancyFilter
 
 
 class VacancyRepository:
@@ -61,3 +61,70 @@ class VacancyRepository:
                 )
             record = await result.single()
             return record["vacancy_data"] if record else None
+        
+
+    async def filter_vacancies(self, filters: VacancyFilter) -> dict:
+        async with self.driver.session() as session:
+            # Label fitration set
+            label_filter = f":{filters.status}" if filters.status else ""
+            query_base = f"MATCH (v:Vacancy{label_filter})"
+            
+            where_clauses = []
+            params = {
+                "limit": filters.limit,
+                "offset": filters.offset
+            }
+
+            if filters.title:
+                where_clauses.append("toLower(v.title) CONTAINS toLower($title)")
+                params["title"] = filters.title
+
+            if filters.description_contains:
+                where_clauses.append("toLower(v.description) CONTAINS toLower($desc)")
+                params["desc"] = filters.description_contains
+
+            date_map = {
+                "created_at_from": "v.created_at >= $c_from",
+                "created_at_to": "v.created_at <= $c_to",
+                "closed_at_from": "v.closed_at >= $cl_from",
+                "closed_at_to": "v.closed_at <= $cl_to",
+            }
+            for key, clause in date_map.items():
+                value = getattr(filters, key, None)
+                if value is not None:
+                    where_clauses.append(clause)
+                    params[key.split('_', 1)[1]] = value
+
+            if filters.has_test_task is not None:
+                exists_condition = "" if filters["has_test_task"] else "NOT"
+                where_clauses.append(f"{exists_condition} EXISTS {{ (v)-[:HAS_TEST_TASK]->(:TestTask) }}")
+
+            where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+
+            sort_by = filters.sort_by
+            sort_order = filters.sort_order
+            full_query = f"""
+            {query_base}
+            {where_str}
+            WITH count(v) AS total_count
+            {query_base}
+            {where_str}
+            RETURN total_count, v {{
+                .*,
+                status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
+            }} AS vacancy_data
+            ORDER BY v.{sort_by} {sort_order}
+            SKIP $offset
+            LIMIT $limit
+            """
+
+            result = await session.run(full_query, **params)
+            records = await result.data()
+
+            if not records:
+                return {"total": 0, "items": []}
+
+            return {
+                "total": records[0]["total_count"],
+                "items": [r["vacancy_data"] for r in records]
+            }

@@ -1,6 +1,6 @@
 .PHONY: up down clean front-logs back-logs swagger-up swagger-down tests
 
-PYTEST_FLAGS = -v --tb=short
+PYTEST_FLAGS = -vv --tb=short
 
 up:
 	docker compose up -d --build

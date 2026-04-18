@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, status, Path
+from fastapi import APIRouter, Depends, status, Query
 from neo4j import AsyncDriver
 from uuid import UUID
+from typing import Annotated
 
 from app.core.database import get_db
 from app.services.vacancy_service import VacancyService
 from app.repositories.vacancy_repo import VacancyRepository
-from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyResponse
+from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyResponse, VacancyFilter, VacancyFilterResponse
 from app.core.exceptions import AppError
 
 router = APIRouter()
@@ -54,3 +55,13 @@ async def patch_vacancy(
     if not vacancy:
         raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
     return vacancy
+
+
+@router.get("", 
+            response_model=VacancyFilterResponse,
+            status_code=status.HTTP_200_OK)
+async def filter_vacancies(
+        filters: Annotated[VacancyFilter, Query()], 
+        vacancy_service: VacancyService = Depends(get_vacancy_service)):
+    vacancies = await vacancy_service.filter_vacancies(filters)
+    return vacancies

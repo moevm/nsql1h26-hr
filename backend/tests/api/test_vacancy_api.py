@@ -83,3 +83,50 @@ async def test_patch_vacancy_invalid_params(async_client):
                                           "status": "OPEN"}
     )
     assert response.status_code == 400
+
+
+async def test_filter_vacancies_ok(async_client):
+    v1_data = {"title": "Python Developer", "description": "Backend focus"}
+    v2_data = {"title": "Frontend Developer", "description": "React focus"}
+    
+    resp1 = await async_client.post("/vacancies", json=v1_data)
+    resp2 = await async_client.post("/vacancies", json=v2_data)
+    
+    vacancy1 = resp1.json()
+    vacancy2 = resp2.json()
+
+    # basic
+    response = await async_client.get("/vacancies")
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data["total"] >= 2
+    item_ids = [item["id"] for item in data["items"]]
+    assert vacancy1["id"] in item_ids
+    assert vacancy2["id"] in item_ids
+
+    # search in title
+    response = await async_client.get("/vacancies", params={"title": "Python"})
+    assert response.status_code == 200
+    data = response.json()
+    
+    assert data["total"] == 1
+    assert data["items"][0]["title"] == "Python Developer"
+
+    # sorting
+    response = await async_client.get(
+        "/vacancies", 
+        params={"sort_by": "title", "sort_order": "desc"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    
+    titles = [item["title"] for item in data["items"] if item["title"] in ["Python Developer", "Frontend Developer"]]
+    assert titles == ["Python Developer", "Frontend Developer"]
+
+async def test_filter_vacancies_empty_result(async_client):
+    response = await async_client.get("/vacancies", params={"title": "NonExistentVacancyName"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+    assert data["items"] == []

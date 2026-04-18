@@ -1,7 +1,8 @@
 import pytest
-from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyStatus
+from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyStatus, VacancyFilter
 from app.services.vacancy_service import VacancyService
 from app.repositories.vacancy_repo import VacancyRepository
+from collections import Counter
 
 
 @pytest.fixture
@@ -64,3 +65,23 @@ async def test_patch_vacancy_ok2(vacancy_service):
     assert patched_vacancy.description == vacancy_patch.description
     assert patched_vacancy.status == VacancyStatus.OPEN
     assert patched_vacancy.closed_at is None
+
+
+async def test_filter_vacancies(vacancy_service):
+    test_vacancies = [VacancyCreate(
+        title="Test vacancy 1",
+        description="Test Vacancy Description 1"
+    ),
+    VacancyCreate(
+        title="Test vacancy 2",
+        description="Test Vacancy Description 2"
+    )]
+
+    expected = []
+    for vacancy in test_vacancies:
+        expected.append(await vacancy_service.create_vacancy(vacancy))
+    filters = VacancyFilter()
+    got_vacancies = await vacancy_service.filter_vacancies(filters)
+    assert got_vacancies.total == len(test_vacancies)
+    expected_sorted = sorted(expected, key=lambda x: x.created_at, reverse=True)
+    assert got_vacancies.items == expected_sorted
