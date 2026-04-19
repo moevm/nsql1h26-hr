@@ -157,6 +157,7 @@ export function Interviews() {
   };
 
   const columns: Column<Interview>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'candidate_id', header: 'Кандидат', render: i => candidates.find(c => c.id === i.candidate_id)?.full_name || '—' },
     { key: 'vacancy_id', header: 'Вакансия', render: i => vacancies.find(v => v.id === i.vacancy_id)?.title || '—' },
     { key: 'tech_spec_id', header: 'Интервьюер', render: i => techSpecs.find(t => t.id === i.tech_spec_id)?.full_name || '—' },

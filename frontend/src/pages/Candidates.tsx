@@ -167,6 +167,7 @@ export function Candidates() {
   };
 
   const columns: Column<Candidate>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'full_name', header: 'ФИО' },
     { key: 'email', header: 'Email' },
     { key: 'phone', header: 'Телефон' },

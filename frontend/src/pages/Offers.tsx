@@ -162,6 +162,7 @@ export function Offers() {
   };
 
   const columns: Column<Offer>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'candidate_id', header: 'Кандидат', render: o => candidates.find(c => c.id === o.candidate_id)?.full_name || '—' },
     { key: 'vacancy_id', header: 'Вакансия', render: o => vacancies.find(v => v.id === o.vacancy_id)?.title || '—' },
     { key: 'salary', header: 'Зарплата', render: o => `${o.salary.toLocaleString('ru-RU')} ₽` },

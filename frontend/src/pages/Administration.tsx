@@ -131,6 +131,7 @@ export function Administration() {
   };
 
   const columns: Column<User>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'email', header: 'Email' },
     { key: 'full_name', header: 'ФИО' },
     { key: 'role', header: 'Роль', render: u => <span className={`badge ${getRoleBadgeClass(u.role)}`}>{getRoleLabel(u.role)}</span> },

@@ -105,6 +105,7 @@ export function Vacancies() {
   };
 
   const columns: Column<Vacancy>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'title', header: 'Название' },
     { 
       key: 'description', 

@@ -7,7 +7,7 @@ import { FilterField } from '../types/filters';
 import { toast } from 'sonner';
 import { getTestTasks, deleteTestTask, getVacancies, TestTask, Vacancy } from '../api';
 import { usePermissions } from '../hooks/usePermissions';
-import { CreateTestAssignmentForm } from '../components/CreateTestTaskForm';
+import { CreateTestTaskForm } from '../components/CreateTestAssignmentForm';
 import '../styles/App.css';
 
 export function TestAssignments() {
@@ -119,6 +119,7 @@ export function TestAssignments() {
   }, [vacancies]);
 
   const columns: Column<TestTask>[] = [
+    { key: 'id', header: 'ID' },
     { key: 'title', header: 'Название' },
     { key: 'test_task_url', header: 'Ссылка', render: a => a.test_task_url ? <a href={a.test_task_url} target="_blank" rel="noreferrer" className="btn btn-sm">Открыть</a> : '—' },
     { key: 'vacancy_id', header: 'Вакансия', render: a => vacancies.find(v => v.id === a.vacancy_id)?.title || '—' },
