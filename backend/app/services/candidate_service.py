@@ -4,6 +4,7 @@ from app.repositories.vacancy_repo import VacancyRepository
 from app.models.candidate import CandidateCreate, CandidateResponse, CandidateStatus
 from app.core.exceptions import AppError
 from fastapi import status
+from uuid import UUID
 
 
 class CandidateService:
@@ -35,4 +36,11 @@ class CandidateService:
             raise AppError("Candidate status must be NEW",
                            status.HTTP_400_BAD_REQUEST)
         candidate = await self.candidate_repo.create_candidate(candidate_data)
+        return CandidateResponse(**candidate)
+
+    async def get_candidate_by_id(self, candidate_id: UUID) -> CandidateResponse:
+        candidate = await self.candidate_repo.get_candidate_by_id(candidate_id)
+        if candidate is None:
+            raise AppError("Candidate not found",
+                           status.HTTP_404_NOT_FOUND)
         return CandidateResponse(**candidate)

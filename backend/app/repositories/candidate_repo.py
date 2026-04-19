@@ -1,5 +1,5 @@
 from neo4j import AsyncDriver
-
+from uuid import UUID
 from app.models.candidate import CandidateCreate
 
 
@@ -59,3 +59,25 @@ class CandidateRepository:
             result = await session.run(create_query, **params)
             record = await result.single()
             return record["candidate_data"] if record else None
+
+    async def get_candidate_by_id(self, candidate_id: UUID) -> dict:
+        async with self.driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (c:Candidate{id:$candidate_id})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
+                } AS candidate_data
+                """,
+                candidate_id=str(candidate_id)
+            )
+            record = await result.single()
+            if not record:
+                return None
+            data = record["candidate_data"]
+            return {k: v for k, v in data.items() if v is not None}

@@ -166,3 +166,45 @@ async def test_create_candidate_solo(candidate_repo, test_task_repo, vacancy_rep
     assert created["email"] == candidate.email
     assert created["phone"] == candidate.phone
     assert created["status"] == candidate.status
+
+
+async def test_get_candidate_all(candidate_repo, test_task_repo, vacancy_repo):
+    vacancy_id = (
+        await vacancy_repo.create_vacancy(
+            VacancyCreate(title="Title1", description="desc")
+        )
+    )["id"]
+    test_task_id = (
+        await test_task_repo.create_test_task(
+            TestTaskCreate(
+                title="Test title 1",
+                test_task_url="https://google.com",
+                vacancy_id=vacancy_id,
+            )
+        )
+    )["id"]
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79527416565",
+        status="NEW",
+        resume_url="https://google.com/",
+        vacancy_id=vacancy_id,
+        test_task_id=test_task_id,
+    )
+    created = await candidate_repo.create_candidate(candidate)
+    got = await candidate_repo.get_candidate_by_id(created["id"])
+    assert got == created
+
+
+async def test_get_candidate_solo(candidate_repo):
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79527416565",
+        status="NEW",
+        resume_url="https://google.com/"
+    )
+    created = await candidate_repo.create_candidate(candidate)
+    got = await candidate_repo.get_candidate_by_id(created["id"])
+    assert got == created

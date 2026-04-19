@@ -111,3 +111,27 @@ async def test_create_bad_vacancy_test_task(candidate_service, vacancy_service, 
     )
     with pytest.raises(AppError, match=r"Test task is not for given vacancy"):
         await candidate_service.create_candidate(candidate)
+
+
+async def test_get_candidate_by_id_ok(candidate_service, vacancy_service, test_task_service):
+    test_vacancy = VacancyCreate(
+        title="Test vacancy", description="Test Vacancy Description"
+    )
+    vacancy = await vacancy_service.create_vacancy(test_vacancy)
+    test_task = TestTaskCreate(
+        title="test task 1", test_task_url="https://google.com", vacancy_id=vacancy.id
+    )
+    test_task = await test_task_service.create_test_task(test_task)
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79638527411",
+        resume_url="https://google.com",
+        status=CandidateStatus.NEW,
+        vacancy_id=vacancy.id,
+        test_task_id=test_task.id
+    )
+    created_candidate = await candidate_service.create_candidate(candidate)
+
+    got_candidate = await candidate_service.get_candidate_by_id(created_candidate.id)
+    assert got_candidate == created_candidate

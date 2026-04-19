@@ -29,3 +29,16 @@ async def create_candidate(
 ):
     candidate = await candidate_service.create_candidate(candidate_data)
     return candidate
+
+
+@router.get(
+    "/{candidate_id}",
+    response_model=CandidateResponse,
+    status_code=status.HTTP_200_OK
+)
+async def get_test_task_by_id(
+    candidate_id: UUID,
+    candidate_service: CandidateService = Depends(get_candidate_service),
+):
+    candidate = await candidate_service.get_candidate_by_id(candidate_id)
+    return candidate

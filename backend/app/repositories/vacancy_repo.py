@@ -44,7 +44,7 @@ class VacancyRepository:
                 } AS vacancy_data
                 """,
                 id=str(vacancy_id)
-                )
+            )
             record = await result.single()
             return record["vacancy_data"] if record else None
 
