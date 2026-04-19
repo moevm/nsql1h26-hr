@@ -9,7 +9,7 @@ from app.services.offer_service import OfferService
 from app.models.offer import OfferCreate, OfferResponse, OfferFilter, OfferFilterResponse
 
 
-router = APIRouter(prefix="/v2/offers", tags=["Offers"])
+router = APIRouter()
 
 
 def get_offer_service(driver: AsyncDriver = Depends(get_db)) -> OfferService:
