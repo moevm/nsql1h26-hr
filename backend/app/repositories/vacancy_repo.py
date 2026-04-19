@@ -50,10 +50,6 @@ class VacancyRepository:
 
     async def patch_vacancy(self, vacancy_id: UUID, data: dict) -> dict:
         async with self.driver.session() as session:
-            if 'closed_at' in data and data['closed_at'] is not None:
-                if isinstance(data['closed_at'], int):
-                    data['closed_at'] = datetime.fromtimestamp(data['closed_at'], tz=timezone.utc)
-        
             new_status = data.pop("status", None)
             query = "MATCH (v:Vacancy {id: $id}) SET v += $props "
             if new_status:
@@ -69,15 +65,15 @@ class VacancyRepository:
                 )
             record = await result.single()
             return record["vacancy_data"] if record else None
-        
+
 
     async def filter_vacancies(self, filters: VacancyFilter) -> dict:
         async with self.driver.session() as session:
-            
+
             # Label fitration set
             label_filter = f":{filters.status}" if filters.status else ""
             query_base = f"MATCH (v:Vacancy{label_filter})"
-            
+
             where_clauses = []
             params = {
                 "limit": filters.limit,
@@ -103,7 +99,6 @@ class VacancyRepository:
                 if value is not None:
                     where_clauses.append(clause)
                     params[param_name] = value
-                    print(f"Added {key} = {value} -> param {param_name}")
 
             if filters.has_test_task is not None:
                 exists_condition = "" if filters.has_test_task else "NOT"
@@ -130,7 +125,7 @@ class VacancyRepository:
 
             result = await session.run(full_query, **params)
             records = await result.data()
-                       
+
             if not records:
                 return {"total": 0, "items": []}
 

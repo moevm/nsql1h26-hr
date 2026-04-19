@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 async def test_create_user(async_client):
@@ -59,6 +59,29 @@ async def test_patch_vacancy_ok(async_client):
     assert got_data["closed_at"] is not None
 
 
+async def test_patch_vacancy_date(async_client):
+    title = "Vacancy 1"
+    description = "Test Description"
+    response = await async_client.post(
+        "/vacancies", json={"title": title, "description": description}
+    )
+    data = response.json()
+    vacancy_id = str(data["id"])
+
+    new_date = datetime.now(timezone.utc)
+
+    response = await async_client.patch(
+        f"/vacancies/{vacancy_id}", json={"created_at": str(new_date),
+                                          "status": "CLOSED"}
+    )
+    assert response.status_code == 200
+    got_data = response.json()
+    assert got_data["title"] == title
+    assert got_data["created_at"] == int(new_date.timestamp())
+    assert got_data["status"] == "CLOSED"
+    assert isinstance(got_data["closed_at"], int)
+
+
 async def test_patch_vacancy_not_found(async_client):
     vacancy_id = str(uuid.uuid4())
 
@@ -88,10 +111,10 @@ async def test_patch_vacancy_invalid_params(async_client):
 async def test_filter_vacancies_ok(async_client):
     v1_data = {"title": "Python Developer", "description": "Backend focus"}
     v2_data = {"title": "Frontend Developer", "description": "React focus"}
-    
+
     resp1 = await async_client.post("/vacancies", json=v1_data)
     resp2 = await async_client.post("/vacancies", json=v2_data)
-    
+
     vacancy1 = resp1.json()
     vacancy2 = resp2.json()
 
@@ -99,7 +122,7 @@ async def test_filter_vacancies_ok(async_client):
     response = await async_client.get("/vacancies")
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] >= 2
     item_ids = [item["id"] for item in data["items"]]
     assert vacancy1["id"] in item_ids
@@ -109,18 +132,18 @@ async def test_filter_vacancies_ok(async_client):
     response = await async_client.get("/vacancies", params={"title": "Python"})
     assert response.status_code == 200
     data = response.json()
-    
+
     assert data["total"] == 1
     assert data["items"][0]["title"] == "Python Developer"
 
     # sorting
     response = await async_client.get(
-        "/vacancies", 
+        "/vacancies",
         params={"sort_by": "title", "sort_order": "desc"}
     )
     assert response.status_code == 200
     data = response.json()
-    
+
     titles = [item["title"] for item in data["items"] if item["title"] in ["Python Developer", "Frontend Developer"]]
     assert titles == ["Python Developer", "Frontend Developer"]
 
@@ -130,3 +153,25 @@ async def test_filter_vacancies_empty_result(async_client):
     data = response.json()
     assert data["total"] == 0
     assert data["items"] == []
+
+
+async def test_filter_vacancies_datetime(async_client):
+    v1_data = {"title": "Python Developer",
+               "description": "Backend focus",
+               "created_at": datetime(2023, 10, 25, 14, 30).timestamp()}
+    v2_data = {"title": "Frontend Developer", "description": "React focus",
+               "created_at": datetime(2024, 10, 25, 14, 30).timestamp()}
+    resp1 = await async_client.post("/vacancies", json=v1_data)
+    await async_client.post("/vacancies", json=v2_data)
+    vacancy1 = resp1.json()
+
+    date1 = datetime(2023, 6, 15, 10, 10).timestamp()
+    date2 = datetime(2024, 10, 14, 14, 14).timestamp()
+
+    response = await async_client.get("/vacancies",
+                                      params={"created_at_from": date1,
+                                              "created_at_to": date2})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert data["items"][0]["id"] == vacancy1["id"]
