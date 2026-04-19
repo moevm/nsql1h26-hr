@@ -18,8 +18,7 @@ class VacancyService:
                 vacancy_data.closed_at is not None:
             raise AppError("Cannot create CLOSED vacancy",
                            status.HTTP_400_BAD_REQUEST)
-        if vacancy_data.created_at is None:
-            vacancy_data.created_at = datetime.now()
+
         vacancy_dict = await self.vacancy_repo.create_vacancy(vacancy_data)
         return VacancyResponse(**vacancy_dict)
 
@@ -37,7 +36,7 @@ class VacancyService:
         if vacancy_data.status is None and vacancy_data.closed_at is not None:
             vacancy_data.status = VacancyStatus.CLOSED
         if vacancy_data.status == VacancyStatus.CLOSED and vacancy_data.closed_at is None:
-            vacancy_data.closed_at = datetime.now()
+            vacancy_data.closed_at = datetime.now(timezone.utc)
         data_dict = vacancy_data.model_dump(exclude_unset=True)
         vacancy = await self.vacancy_repo.get_vacancy_by_id(vacancy_id)
         if not vacancy:
