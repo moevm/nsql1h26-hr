@@ -4,8 +4,10 @@ neo4j
 python-dotenv
 pydantic
 pydantic-settings
-pydantic-extra-types[phone-numbers]
+phonenumbers
 pytest
 pytest-asyncio
 httpx
+pydantic[email]
 testcontainers-neo4j
+pydantic-extra-types[phone-numbers]

@@ -8,6 +8,7 @@ from app.core.exceptions import AppError
 # Импорт роутеров
 from app.api.v2.vacancies.routes import router as vacancy_router
 from app.api.v2.test_tasks.routes import router as test_task_router
+from app.api.v2.candidates.routes import router as candidate_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -31,6 +32,10 @@ app.include_router(
     prefix=f"{settings.api_prefix}/test-tasks", tags=["TestTasks"]
 )
 
+app.include_router(
+    candidate_router,
+    prefix=f"{settings.api_prefix}/candidates", tags=["Candidates"]
+)
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
