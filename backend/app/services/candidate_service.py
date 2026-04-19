@@ -1,7 +1,7 @@
 from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.test_task_repo import TestTaskRepository
 from app.repositories.vacancy_repo import VacancyRepository
-from app.models.candidate import CandidateCreate, CandidateResponse, CandidateStatus
+from app.models.candidate import CandidateCreate, CandidateResponse, CandidateFilter, CandidateFilterResponse, CandidateStatus
 from app.core.exceptions import AppError
 from fastapi import status
 from uuid import UUID
@@ -44,3 +44,7 @@ class CandidateService:
             raise AppError("Candidate not found",
                            status.HTTP_404_NOT_FOUND)
         return CandidateResponse(**candidate)
+
+    async def filter_candidates(self, filters: CandidateFilter) -> CandidateFilterResponse:
+        candidates = await self.candidate_repo.filter_candidates(filters)
+        return CandidateFilterResponse(**candidates)

@@ -2,7 +2,7 @@ import pytest
 import uuid
 from app.models.vacancy import VacancyCreate
 from app.models.test_task import TestTaskCreate
-from app.models.candidate import CandidateCreate, CandidateResponse, CandidateStatus
+from app.models.candidate import CandidateCreate, CandidateResponse, CandidateFilter, CandidateFilterResponse, CandidateStatus
 from app.services.test_task_service import TestTaskService
 from app.services.vacancy_service import VacancyService
 from app.services.candidate_service import CandidateService
@@ -135,3 +135,38 @@ async def test_get_candidate_by_id_ok(candidate_service, vacancy_service, test_t
 
     got_candidate = await candidate_service.get_candidate_by_id(created_candidate.id)
     assert got_candidate == created_candidate
+
+
+async def test_filter_candidates(candidate_service, vacancy_service, test_task_service):
+    vacancy = await vacancy_service.create_vacancy(VacancyCreate(title="Test Vacancy", description="Desc"))
+    test_task = await test_task_service.create_test_task(TestTaskCreate(
+        title="Test Task", test_task_url="https://test.com", vacancy_id=vacancy.id
+    ))
+    candidates_data = [
+        CandidateCreate(
+            full_name="Candidate A",
+            email="a@example.com",
+            phone="+79123456789",
+            status="NEW",
+            resume_url="https://resume1.com",
+            vacancy_id=vacancy.id,
+            test_task_id=test_task.id,
+        ),
+        CandidateCreate(
+            full_name="Candidate B",
+            email="b@example.com",
+            phone="+79998887766",
+            status="NEW",
+            resume_url="https://resume2.com",
+            vacancy_id=vacancy.id,
+            test_task_id=test_task.id,
+        ),
+    ]
+    created_candidates = []
+    for cand_data in candidates_data:
+        created = await candidate_service.create_candidate(cand_data)
+        created_candidates.append(created)
+
+    filters = CandidateFilter()
+    result = await candidate_service.filter_candidates(filters)
+    assert result.total == len(candidates_data)

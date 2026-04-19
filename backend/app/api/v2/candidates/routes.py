@@ -7,7 +7,7 @@ from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
 from app.repositories.candidate_repo import CandidateRepository
 from app.services.candidate_service import CandidateService
-from app.models.candidate import CandidateCreate, CandidateResponse
+from app.models.candidate import CandidateCreate, CandidateResponse, CandidateFilterResponse, CandidateFilter
 
 
 router = APIRouter()
@@ -42,3 +42,16 @@ async def get_test_task_by_id(
 ):
     candidate = await candidate_service.get_candidate_by_id(candidate_id)
     return candidate
+
+
+@router.get(
+    "",
+    response_model=CandidateFilterResponse,
+    status_code=status.HTTP_200_OK
+)
+async def filter_test_tasks(
+    filters: Annotated[CandidateFilter, Query()],
+    candidate_service: CandidateService = Depends(get_candidate_service),
+):
+    candidates = await candidate_service.filter_candidates(filters)
+    return candidates
