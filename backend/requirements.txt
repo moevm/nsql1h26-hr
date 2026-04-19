@@ -2,3 +2,10 @@ fastapi
 uvicorn[standard]
 neo4j
 python-dotenv
+pydantic
+pydantic-settings
+pydantic-extra-types[phone-numbers]
+pytest
+pytest-asyncio
+httpx
+testcontainers-neo4j

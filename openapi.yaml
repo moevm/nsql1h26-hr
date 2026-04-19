@@ -8,7 +8,7 @@ info:
     Все GET-запросы поддерживают регистронезависимый поиск по подстроке.
 
 servers:
-  - url: https://api.recruitment-crm.com/v2
+  - url: http://localhost:8000/api
 
 components:
   securitySchemes:

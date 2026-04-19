@@ -1,21 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from app.database import db
-from app.routes import router
+from app.core.database import lifespan
+from app.core.config import settings
+from app.core.exceptions import AppError
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    db.connect()
-    yield
-    # Shutdown
-    db.close()
+# Импорт роутеров
+from app.api.v2.vacancies.routes import router as vacancy_router
+from app.api.v2.test_tasks.routes import router as test_task_router
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
-app.include_router(router)
-
+# TODO: check for safety
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,6 +20,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def root():
-    return {"message": "CRM backend is running"}
+# Подключение роутеров
+app.include_router(
+    vacancy_router,
+    prefix=f"{settings.api_prefix}/vacancies", tags=["Vacancies"]
+)
+
+app.include_router(
+    test_task_router,
+    prefix=f"{settings.api_prefix}/test-tasks", tags=["TestTasks"]
+)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
+    """
+    Общий обработчик исключений.
+    Унифицирует отправку кодов ошибок.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "status": "error",
+            "code": exc.code,
+            "message": exc.message,
+            "path": request.url.path,
+        },
+    )
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
