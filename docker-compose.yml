@@ -10,7 +10,7 @@ services:
     volumes:
       - ./openapi.yaml:/openapi.yaml
   
-    frontend-service:
+  frontend-service:
     container_name: frontend-container
     build:
       context: ./frontend
