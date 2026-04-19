@@ -1,6 +1,7 @@
 from neo4j import AsyncDriver
 from uuid import UUID
 from app.models.vacancy import VacancyCreate, VacancyFilter
+from datetime import datetime, timezone
 
 
 class VacancyRepository:
@@ -9,6 +10,9 @@ class VacancyRepository:
 
     async def create_vacancy(self, vacancy_data: VacancyCreate) -> dict:
         async with self.driver.session() as session:
+            created_at = vacancy_data.created_at
+            if created_at is None:
+                created_at = datetime.now(timezone.utc)
             result = await session.run(
                 f"""
                 CREATE (v:Vacancy:{vacancy_data.status} {{
@@ -24,7 +28,7 @@ class VacancyRepository:
                 """,
                 title=vacancy_data.title,
                 description=vacancy_data.description,
-                created_at=vacancy_data.created_at,
+                created_at=created_at,
             )
             record = await result.single()
             return record["vacancy_data"] if record else None
@@ -46,6 +50,10 @@ class VacancyRepository:
 
     async def patch_vacancy(self, vacancy_id: UUID, data: dict) -> dict:
         async with self.driver.session() as session:
+            if 'closed_at' in data and data['closed_at'] is not None:
+                if isinstance(data['closed_at'], int):
+                    data['closed_at'] = datetime.fromtimestamp(data['closed_at'], tz=timezone.utc)
+        
             new_status = data.pop("status", None)
             query = "MATCH (v:Vacancy {id: $id}) SET v += $props "
             if new_status:
@@ -65,6 +73,7 @@ class VacancyRepository:
 
     async def filter_vacancies(self, filters: VacancyFilter) -> dict:
         async with self.driver.session() as session:
+            
             # Label fitration set
             label_filter = f":{filters.status}" if filters.status else ""
             query_base = f"MATCH (v:Vacancy{label_filter})"
@@ -84,19 +93,20 @@ class VacancyRepository:
                 params["desc"] = filters.description_contains
 
             date_map = {
-                "created_at_from": "v.created_at >= $c_from",
-                "created_at_to": "v.created_at <= $c_to",
-                "closed_at_from": "v.closed_at >= $cl_from",
-                "closed_at_to": "v.closed_at <= $cl_to",
+                "created_at_from": ("v.created_at >= $c_from", "c_from"),
+                "created_at_to": ("v.created_at <= $c_to", "c_to"),
+                "closed_at_from": ("v.closed_at >= $cl_from", "cl_from"),
+                "closed_at_to": ("v.closed_at <= $cl_to", "cl_to")
             }
-            for key, clause in date_map.items():
+            for key, (clause, param_name) in date_map.items():
                 value = getattr(filters, key, None)
                 if value is not None:
                     where_clauses.append(clause)
-                    params[key.split('_', 1)[1]] = value
+                    params[param_name] = value
+                    print(f"Added {key} = {value} -> param {param_name}")
 
             if filters.has_test_task is not None:
-                exists_condition = "" if filters["has_test_task"] else "NOT"
+                exists_condition = "" if filters.has_test_task else "NOT"
                 where_clauses.append(f"{exists_condition} EXISTS {{ (:TestTask)-[:TEST_FOR]->(v) }}")
 
             where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
@@ -120,7 +130,7 @@ class VacancyRepository:
 
             result = await session.run(full_query, **params)
             records = await result.data()
-
+                       
             if not records:
                 return {"total": 0, "items": []}
 
