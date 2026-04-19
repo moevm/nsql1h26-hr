@@ -10,6 +10,7 @@ from app.api.v2.vacancies.routes import router as vacancy_router
 from app.api.v2.test_tasks.routes import router as test_task_router
 from app.api.v2.candidates.routes import router as candidate_router
 from app.api.v2.interviews.routes import router as interview_router
+from app.api.v2.offers.routes import router as offer_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -41,6 +42,11 @@ app.include_router(
 app.include_router(
     interview_router,
     prefix=f"{settings.api_prefix}/interviews", tags=["Interviews"]
+)
+
+app.include_router(
+    offer_router,
+    prefix=f"{settings.api_prefix}/offers", tags=["Offers"]
 )
 
 
