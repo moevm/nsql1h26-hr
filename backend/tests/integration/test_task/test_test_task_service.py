@@ -1,7 +1,6 @@
 import pytest
-import uuid
 from app.models.vacancy import VacancyCreate
-from app.models.test_task import TestTaskCreate, TestTaskResponse
+from app.models.test_task import TestTaskCreate, TestTasksFilter
 from app.services.test_task_service import TestTaskService
 from app.services.vacancy_service import VacancyService
 from app.repositories.test_task_repo import TestTaskRepository
@@ -48,3 +47,24 @@ async def test_get_test_task_by_id(test_task_service, vacancy_service):
 
     got_test_task = await test_task_service.get_test_task_by_id(created_test_task.id)
     assert got_test_task == created_test_task
+
+
+async def test_filter_test_tasks(test_task_service, vacancy_service):
+    test_vacancy = VacancyCreate(
+        title="Test vacancy", description="Test Vacancy Description"
+    )
+    vacancy = await vacancy_service.create_vacancy(test_vacancy)
+    test_tasks_data = [
+        TestTaskCreate(title="test task 1", test_task_url="https://google.com", vacancy_id=vacancy.id),
+        TestTaskCreate(title="test task 2", test_task_url="https://ggle.com", vacancy_id=vacancy.id),
+    ]
+    created_tasks = []
+    for task_data in test_tasks_data:
+        created_tasks.append(await test_task_service.create_test_task(task_data))
+
+    filters = TestTasksFilter()
+    result = await test_task_service.filter_test_tasks(filters)
+
+    assert result.total == len(test_tasks_data)
+    expected_sorted = sorted(created_tasks, key=lambda x: x.title, reverse=False)
+    assert result.items == expected_sorted

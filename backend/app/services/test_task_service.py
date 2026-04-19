@@ -1,4 +1,4 @@
-from app.models.test_task import TestTaskCreate, TestTaskResponse
+from app.models.test_task import TestTaskCreate, TestTaskResponse, TestTasksFilter, TestTasksFilterResponse
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
 from app.core.exceptions import AppError
@@ -34,3 +34,7 @@ class TestTaskService:
                 status.HTTP_404_NOT_FOUND,
             )
         return TestTaskResponse(**test_task)
+
+    async def filter_test_tasks(self, filters: TestTasksFilter) -> TestTasksFilterResponse:
+        filters = await self.test_task_repo.filter_test_tasks(filters)
+        return TestTasksFilterResponse(**filters)

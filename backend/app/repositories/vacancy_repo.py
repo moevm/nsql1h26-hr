@@ -108,6 +108,7 @@ class VacancyRepository:
 
             sort_by = filters.sort_by
             sort_order = filters.sort_order
+            # TODO: modify query as in TEST TASK REPO
             full_query = f"""
             {query_base}
             {where_str}

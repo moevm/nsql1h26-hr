@@ -1,11 +1,12 @@
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Query
 from neo4j import AsyncDriver
+from typing import Annotated
 from uuid import UUID
 from app.core.database import get_db
 from app.services.test_task_service import TestTaskService
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
-from app.models.test_task import TestTaskCreate, TestTaskResponse
+from app.models.test_task import TestTaskCreate, TestTaskResponse, TestTasksFilter, TestTasksFilterResponse
 
 router = APIRouter()
 
@@ -38,3 +39,16 @@ async def get_test_task_by_id(
 ):
     test_task = await test_task_service.get_test_task_by_id(test_task_id)
     return test_task
+
+
+@router.get(
+    "",
+    response_model=TestTasksFilterResponse,
+    status_code=status.HTTP_200_OK
+)
+async def filter_test_tasks(
+    filters: Annotated[TestTasksFilter, Query()],
+    test_task_service: TestTaskService = Depends(get_test_task_service),
+):
+    test_tasks = await test_task_service.filter_test_tasks(filters)
+    return test_tasks
