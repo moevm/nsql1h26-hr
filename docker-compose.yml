@@ -9,14 +9,21 @@ services:
       SWAGGER_JSON: /openapi.yaml
     volumes:
       - ./openapi.yaml:/openapi.yaml
-  frontend-service:
+  
+    frontend-service:
     container_name: frontend-container
     build:
       context: ./frontend
     environment:
       - PORT=5173
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HOST=0.0.0.0
+      - VITE_API_URL=http://localhost:8000/api/v2
     ports:
       - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend-service
     
