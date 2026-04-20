@@ -9,62 +9,74 @@ class CandidateRepository:
 
     async def create_candidate(self, candidate_data: CandidateCreate) -> dict:
         async with self.driver.session() as session:
-            resume_url_str = (
-                ", resume_url: $resume_url" if candidate_data.resume_url else ""
-            )
-            create_query = f"""
-                CREATE (c:Candidate:{candidate_data.status}{{
-                    id: randomUUID(),
-                    full_name: $full_name,
-                    email: $email,
-                    phone: $phone
-                    {resume_url_str}
-                }})
-                """
             params = {
                 "full_name": candidate_data.full_name,
                 "email": candidate_data.email,
                 "phone": candidate_data.phone,
             }
+
+            create_query = f"""
+                CREATE (c:Candidate:{candidate_data.status} {{
+                    id: randomUUID(),
+                    full_name: $full_name,
+                    email: $email,
+                    phone: $phone
+            """
+
+            if candidate_data.resume_url:
+                params["resume_url"] = str(candidate_data.resume_url)
+                create_query += ", resume_url: $resume_url"
+
+            create_query += "})"
+
             if candidate_data.vacancy_id:
                 params["vacancy_id"] = str(candidate_data.vacancy_id)
                 create_query = (
-                    " MATCH (v:Vacancy{id: $vacancy_id}) "
+                    "MATCH (v:Vacancy {id: $vacancy_id}) "
                     + create_query
                     + " CREATE (c)-[:APPLIES]->(v) "
                 )
+
             if candidate_data.test_task_id:
                 params["test_task_id"] = str(candidate_data.test_task_id)
                 create_query = (
-                    "MATCH (t:TestTask{id: $test_task_id})"
+                    "MATCH (t:TestTask {id: $test_task_id}) "
                     + create_query
                     + " CREATE (c)-[:COMPLETES]->(t) "
                 )
-            if candidate_data.resume_url:
-                params["resume_url"] = str(candidate_data.resume_url)
-            vacancy_str = (
-                ", vacancy_id: $vacancy_id" if candidate_data.vacancy_id else ""
-            )
-            test_task_id_str = (
-                ", test_task_id: $test_task_id" if candidate_data.test_task_id else ""
-            )
-            create_query += f"""
-            RETURN c {{
-                .*
-                {vacancy_str}
-                {test_task_id_str},
-                status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-            }}  AS candidate_data
-            """
+
+            create_query += " RETURN c.id as id"
+
             result = await session.run(create_query, **params)
             record = await result.single()
-            return record["candidate_data"] if record else None
+            if not record:
+                return None
+
+            candidate_id = record["id"]
+
+            get_query = """
+                MATCH (c:Candidate {id: $candidate_id})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
+                } AS candidate_data
+            """
+            result = await session.run(get_query, candidate_id=candidate_id)
+            record = await result.single()
+            if record:
+                data = dict(record["candidate_data"])
+                return {k: v for k, v in data.items() if v is not None}
+            return None
 
     async def get_candidate_by_id(self, candidate_id: UUID) -> dict:
         async with self.driver.session() as session:
             result = await session.run(
                 """
-                MATCH (c:Candidate{id:$candidate_id})
+                MATCH (c:Candidate {id: $candidate_id})
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
                 RETURN c {
@@ -101,8 +113,6 @@ class CandidateRepository:
             if filters.resume_url_contains:
                 where_clauses.append("toLower(c.resume_url) CONTAINS toLower($resume_url_contains)")
                 params["resume_url_contains"] = str(filters.resume_url_contains)
-
-            # TODO: Add created_at sorting
 
             if filters.vacancy_id:
                 where_clauses.append("EXISTS { (c)-[:APPLIES]->(v:Vacancy {id: $vacancy_id}) }")
@@ -146,17 +156,20 @@ class CandidateRepository:
             order_by_clause = f"{sort_field} {filters.sort_order.value}"
 
             full_query = f"""
-            {match_base}
-            {where_str}
-            WITH c
-            ORDER BY {order_by_clause}
-            WITH count(c) AS total_count, collect(c {{.*,
-            status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-            }}) AS items
-            RETURN total_count, items[$offset..$offset + $limit] AS candidate_data
+                {match_base}
+                {where_str}
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                WITH c, v.id as vacancy_id, t.id as test_task_id
+                ORDER BY {order_by_clause}
+                WITH count(c) AS total_count, collect(c {{
+                    .*,
+                    vacancy_id: vacancy_id,
+                    test_task_id: test_task_id,
+                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
+                }}) AS items
+                RETURN total_count, items[$offset..$offset + $limit] AS candidate_data
             """
-
-            # TODO: Implement vacancy and test task IDS return
 
             result = await session.run(full_query, **params)
             record = await result.single()

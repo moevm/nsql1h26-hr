@@ -1,10 +1,9 @@
 from enum import StrEnum
 from uuid import UUID
-from pydantic import BaseModel, Field, EmailStr, HttpUrl, ConfigDict
-from pydantic_extra_types.phone_numbers import PhoneNumber
+from pydantic import BaseModel, Field, EmailStr, HttpUrl, ConfigDict, field_validator
+from typing import List
 from app.models.unix_timestamp import UnixTimestamp
 from app.models.helpers import SortOrder
-from typing import List
 
 
 class CandidateStatus(StrEnum):
@@ -26,11 +25,18 @@ class CandidateSort(StrEnum):
 class CandidateCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
-    phone: PhoneNumber
+    phone: str  #workaround
     resume_url: HttpUrl | None = None
     status: CandidateStatus
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        if not v.startswith('+7') or len(v) != 12 or not v[1:].isdigit():
+            raise ValueError('Phone number must be in format +7XXXXXXXXXX (10 digits after +7)')
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -39,11 +45,18 @@ class CandidateResponse(BaseModel):
     id: UUID
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
-    phone: PhoneNumber
+    phone: str 
     resume_url: HttpUrl | None = None
     status: CandidateStatus
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
+
+    @field_validator('phone')
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        if not v.startswith('+7') or len(v) != 12 or not v[1:].isdigit():
+            raise ValueError('Phone number must be in format +7XXXXXXXXXX (10 digits after +7)')
+        return v
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -51,7 +64,7 @@ class CandidateResponse(BaseModel):
 class CandidateFilter(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None
-    phone: PhoneNumber | None = None
+    phone: str | None = None
     resume_url_contains: HttpUrl | None = None
     status: CandidateStatus | None = None
     vacancy_id: UUID | None = None
