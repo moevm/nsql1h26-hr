@@ -11,3 +11,7 @@ httpx
 pydantic[email]
 testcontainers-neo4j
 pydantic-extra-types[phone-numbers]
+python-jose[cryptography]
+bcrypt>=4.0.0
+passlib>=1.7.4
+python-multipart
