@@ -7,6 +7,7 @@ from app.services.test_task_service import TestTaskService
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
 from app.models.test_task import TestTaskCreate, TestTaskResponse, TestTasksFilter, TestTasksFilterResponse
+from app.core.security import require_role
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ def get_test_task_service(driver: AsyncDriver = Depends(get_db)) -> TestTaskServ
 async def create_test_task(
     test_task_data: TestTaskCreate,
     test_task_service: TestTaskService = Depends(get_test_task_service),
+    current_user: dict = Depends(require_role('HR'))
 ):
     test_task = await test_task_service.create_test_task(test_task_data)
     return test_task

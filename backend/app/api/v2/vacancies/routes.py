@@ -8,6 +8,7 @@ from app.services.vacancy_service import VacancyService
 from app.repositories.vacancy_repo import VacancyRepository
 from app.models.vacancy import VacancyCreate, VacancyPatch, VacancyResponse, VacancyFilter, VacancyFilterResponse
 from app.core.exceptions import AppError
+from app.core.security import require_role
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ def get_vacancy_service(driver: AsyncDriver = Depends(get_db)) -> VacancyService
 async def create_vacancy(
     vacancy_data: VacancyCreate,
     vacancy_service: VacancyService = Depends(get_vacancy_service),
+    current_user: dict = Depends(require_role('HR'))
 ):
     vacancy = await vacancy_service.create_vacancy(vacancy_data)
     if not vacancy:
@@ -36,7 +38,7 @@ async def create_vacancy(
             status_code=status.HTTP_200_OK)
 async def get_vacancy_by_id(
     vacancy_id: UUID,
-    vacancy_service: VacancyService = Depends(get_vacancy_service)
+    vacancy_service: VacancyService = Depends(get_vacancy_service),
 ):
     vacancy = await vacancy_service.get_vacancy_by_id(vacancy_id)
     if not vacancy:
@@ -50,7 +52,9 @@ async def get_vacancy_by_id(
 async def patch_vacancy(
         vacancy_id: UUID,
         patch_data: VacancyPatch,
-        vacancy_service: VacancyService = Depends(get_vacancy_service)):
+        vacancy_service: VacancyService = Depends(get_vacancy_service),
+        current_user: dict = Depends(require_role('HR'))
+        ):
     vacancy = await vacancy_service.patch_vacancy(vacancy_id, patch_data)
     if not vacancy:
         raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
@@ -62,6 +66,7 @@ async def patch_vacancy(
             status_code=status.HTTP_200_OK)
 async def filter_vacancies(
         filters: Annotated[VacancyFilter, Query()], 
-        vacancy_service: VacancyService = Depends(get_vacancy_service)):
+        vacancy_service: VacancyService = Depends(get_vacancy_service),
+        ):
     vacancies = await vacancy_service.filter_vacancies(filters)
     return vacancies
