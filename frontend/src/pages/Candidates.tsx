@@ -1,3 +1,4 @@
+// pages/Candidates.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DataTable, Column } from '../components/DataTable';
@@ -31,51 +32,36 @@ export function Candidates() {
     resume_url: '',
     status: 'all',
     vacancy_id: 'all',
-    createdFrom: '',
-    createdTo: '',
   });
 
   useEffect(() => {
-    loadVacanciesForFilter();
-  }, []);
-
-  useEffect(() => {
-    loadCandidates();
+    loadData();
   }, [filters, pagination]);
 
-  async function loadVacanciesForFilter() {
-    try {
-      const response = await getVacancies({ limit: 200 });
-      setVacancies(response.items);
-    } catch (err) {
-      console.error('Failed to load vacancies for filter:', err);
-    }
-  }
-
-  async function loadCandidates() {
+  async function loadData() {
     setLoading(true);
     try {
-      const params: any = {
-        limit: pagination.limit,
-        offset: pagination.offset,
-      };
-      if (filters.full_name) params.full_name = filters.full_name;
-      if (filters.email) params.email = filters.email;
-      if (filters.phone) params.phone = filters.phone;
-      if (filters.resume_url) params.resume_url_contains = filters.resume_url;
-      if (filters.status !== 'all') params.status = filters.status;
-      if (filters.vacancy_id !== 'all') params.vacancy_id = filters.vacancy_id;
-      if (filters.createdFrom) {
-        params.created_at_from = Math.floor(new Date(filters.createdFrom).getTime() / 1000);
-      }
-      if (filters.createdTo) {
-        params.created_at_to = Math.floor(new Date(filters.createdTo).getTime() / 1000);
-      }
-      const response = await getCandidates(params);
-      setCandidates(response.items);
-      setTotal(response.total);
+      const [candidatesRes, vacanciesRes] = await Promise.all([
+        getCandidates({
+          limit: pagination.limit,
+          offset: pagination.offset,
+          ...(filters.full_name && { full_name: filters.full_name }),
+          ...(filters.email && { email: filters.email }),
+          ...(filters.phone && { phone: filters.phone }),
+          ...(filters.resume_url && { resume_url_contains: filters.resume_url }),
+          ...(filters.status !== 'all' && { status: filters.status }),
+          ...(filters.vacancy_id !== 'all' && { vacancy_id: filters.vacancy_id }),
+          ...(filters.createdFrom && { created_at_from: Math.floor(new Date(filters.createdFrom).getTime() / 1000) }),
+          ...(filters.createdTo && { created_at_to: Math.floor(new Date(filters.createdTo).getTime() / 1000) }),
+        }),
+        getVacancies({ limit: 200 })
+      ]);
+      
+      setCandidates(candidatesRes.items);
+      setTotal(candidatesRes.total);
+      setVacancies(vacanciesRes.items);
     } catch (err) {
-      toast.error('Ошибка загрузки кандидатов');
+      toast.error('Ошибка загрузки данных');
       console.error(err);
     } finally {
       setLoading(false);
@@ -110,7 +96,7 @@ export function Candidates() {
       await Promise.all(selectedCandidates.map(id => deleteCandidate(id)));
       toast.success('Кандидаты удалены');
       setSelectedCandidates([]);
-      loadCandidates();
+      loadData();
     } catch (err) {
       toast.error('Ошибка при удалении');
     }
@@ -136,9 +122,7 @@ export function Candidates() {
           { value: 'REJECTED', label: 'Отказ' },
         ],
       },
-      { key: 'vacancy_id', label: 'Вакансия', type: 'select', options: vacancyOptions },
-      { key: 'createdFrom', label: 'Создан с', type: 'date' },
-      { key: 'createdTo', label: 'Создан по', type: 'date' },
+      { key: 'vacancy_id', label: 'Вакансия', type: 'select', options: vacancyOptions }
     ];
   }, [vacancies]);
 
@@ -167,7 +151,6 @@ export function Candidates() {
   };
 
   const columns: Column<Candidate>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'full_name', header: 'ФИО' },
     { key: 'email', header: 'Email' },
     { key: 'phone', header: 'Телефон' },
@@ -179,12 +162,10 @@ export function Candidates() {
     {
       key: 'vacancy_id',
       header: 'Вакансия',
-      render: c => vacancies.find(v => v.id === c.vacancy_id)?.title || '—',
-    },
-    {
-      key: 'created_at',
-      header: 'Создан',
-      render: c => c.created_at ? new Date(c.created_at * 1000).toLocaleDateString('ru-RU') : '—',
+      render: c => {
+        const vacancy = vacancies.find(v => String(v.id) === String(c.vacancy_id));
+        return vacancy?.title || '—';
+      },
     },
   ];
 
@@ -234,7 +215,7 @@ export function Candidates() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет кандидатов"
             actions={c => (
-              <button className="btn btn-sm" onClick={() => {}} title="Просмотр деталей">
+              <button className="btn btn-sm" onClick={() => navigate(`/candidates/${c.id}`)} title="Просмотр деталей">
                 👁️
               </button>
             )}
@@ -257,7 +238,7 @@ export function Candidates() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <CreateCandidateForm 
-              onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadCandidates(); }} 
+              onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadData(); }} 
               onCancel={() => setShowModal(false)}
             />
           </div>
