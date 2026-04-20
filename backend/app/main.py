@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import lifespan
 from app.core.config import settings
 from app.core.exceptions import AppError
+from app.middleware.auth import AuthMiddleware
 
 # Импорт роутеров
 from app.api.v2.vacancies.routes import router as vacancy_router
@@ -11,6 +12,8 @@ from app.api.v2.test_tasks.routes import router as test_task_router
 from app.api.v2.candidates.routes import router as candidate_router
 from app.api.v2.interviews.routes import router as interview_router
 from app.api.v2.offers.routes import router as offer_router
+from app.api.v2.auth.routes import router as auth_router
+from app.api.v2.users.routes import router as user_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -21,6 +24,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.add_middleware(
+    AuthMiddleware
 )
 
 # Подключение роутеров
@@ -47,6 +54,16 @@ app.include_router(
 app.include_router(
     offer_router,
     prefix=f"{settings.api_prefix}/offers", tags=["Offers"]
+)
+
+app.include_router(
+    auth_router,
+    prefix=f"{settings.api_prefix}/auth", tags=["Auth"]
+)
+
+app.include_router(
+    user_router,
+    prefix=f"{settings.api_prefix}/users", tags=["Users"]
 )
 
 
