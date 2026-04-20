@@ -1,60 +1,34 @@
-// pages/Login.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { login } from '../api';
 import '../styles/App.css';
 
 export function Login() {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email || !password) {
+      toast.error('Введите email и пароль');
+      return;
+    }
 
-    // TODO: заменить на реальный API вызов
-    if (username === 'hr' && password === 'hr123') {
-      const user = {
-        id: '1',
-        full_name: 'HR Менеджер',  // full_name вместо fullName
-        role: 'HR',                 // правильный формат
-        email: 'hr@example.com',
-      };
-      localStorage.setItem('user', JSON.stringify(user));
+    setLoading(true);
+    
+    try {
+      await login({ email, password });
       toast.success('Добро пожаловать!');
       navigate('/vacancies');
-    } else if (username === 'admin' && password === 'admin123') {
-      const user = {
-        id: '2',
-        full_name: 'Администратор',
-        role: 'ADMIN',              // правильный формат (заглавные)
-        email: 'admin@example.com',
-      };
-      localStorage.setItem('user', JSON.stringify(user));
-      toast.success('Добро пожаловать!');
-      navigate('/vacancies');
-    } else if (username === 'tech' && password === 'tech123') {
-      const user = {
-        id: '3',
-        full_name: 'Технический специалист',
-        role: 'TECH_SPEC',          // правильный формат (полное название)
-        email: 'tech@example.com',
-      };
-      localStorage.setItem('user', JSON.stringify(user));
-      toast.success('Добро пожаловать!');
-      navigate('/vacancies');
-    } else if (username === 'manager' && password === 'manager123') {
-      const user = {
-        id: '4',
-        full_name: 'Менеджер',
-        role: 'MANAGER',            // правильный формат (заглавные)
-        email: 'manager@example.com',
-      };
-      localStorage.setItem('user', JSON.stringify(user));
-      toast.success('Добро пожаловать!');
-      navigate('/vacancies');
-    } else {
-      toast.error('Неверный логин или пароль');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка при входе в систему');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,15 +42,16 @@ export function Login() {
         </div>
         <form onSubmit={handleLogin} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Логин</label>
+            <label htmlFor="email">Email</label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="Введите логин"
+              id="email"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="user@example.com"
               required
               autoFocus
+              disabled={loading}
             />
           </div>
           <div className="form-group">
@@ -88,19 +63,20 @@ export function Login() {
               onChange={e => setPassword(e.target.value)}
               placeholder="Введите пароль"
               required
+              disabled={loading}
             />
           </div>
-          <button type="submit" className="btn btn-primary w-full">
-            Войти
+          <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+            {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-        <div className="login-footer">
+         <div className="login-footer">
           <p>Тестовые пользователи:</p>
           <ul>
-            <li><strong>HR:</strong> hr / hr123</li>
-            <li><strong>Администратор:</strong> admin / admin123</li>
-            <li><strong>Менеджер:</strong> manager / manager123</li>
-            <li><strong>Технический специалист:</strong> tech / tech123</li>
+            <li><strong>HR:</strong> hr@example.com / hr123</li>
+            <li><strong>Администратор:</strong> admin@example.com / admin123</li>
+            <li><strong>Менеджер:</strong> manager@example.com / manager123</li>
+            <li><strong>Тех. специалист:</strong> tech@example.com / tech123</li>
           </ul>
         </div>
       </div>

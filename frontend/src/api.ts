@@ -1,15 +1,23 @@
-// src/api.ts
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v2';
 
-function getAuthToken(): string | null {
-  return localStorage.getItem('token');
+function getAccessToken(): string | null {
+  return localStorage.getItem('access_token');
+}
+
+function setAccessToken(token: string): void {
+  localStorage.setItem('access_token', token);
+}
+
+function removeAccessToken(): void {
+  localStorage.removeItem('access_token');
 }
 
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getAuthToken();
+  const token = getAccessToken();
+  
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
@@ -21,11 +29,18 @@ async function apiRequest<T>(
     headers,
   });
 
+  if (response.status === 401) {
+    removeAccessToken();
+    localStorage.removeItem('user');
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    throw new Error('Session expired. Please login again.');
+  }
+
   if (!response.ok) {
     let errorMessage = `API error: ${response.status}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
+      errorMessage = errorData.message || errorData.detail || errorMessage;
     } catch {
       // ignore
     }
@@ -35,7 +50,32 @@ async function apiRequest<T>(
   if (response.status === 204) {
     return {} as T;
   }
+  
   return response.json();
+}
+
+export async function login(credentials: { email: string; password: string }) {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Login failed');
+  }
+
+  const data = await response.json();
+  setAccessToken(data.access_token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  return data;
+}
+
+export async function logout() {
+  removeAccessToken();
+  localStorage.removeItem('user');
+  window.dispatchEvent(new CustomEvent('auth:logout'));
 }
 
 // ---------- Users ----------
@@ -359,3 +399,5 @@ export async function updateOfferStatus(
 export async function deleteOffer(id: string): Promise<void> {
   return apiRequest(`/offers/${id}`, { method: 'DELETE' });
 }
+
+
