@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     neo4j_password: str = Field("password", validation_alias="NEO4J_PASSWORD")
     neo4j_database: str = Field("neo4j", validation_alias="NEO4J_DATABASE")
     api_prefix: str = "/api/v2"
-
-
+    
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_days: int = 7
+        
 settings = Settings()
