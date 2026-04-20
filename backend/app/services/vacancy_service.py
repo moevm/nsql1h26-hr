@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import status
 from uuid import UUID
 from app.repositories.vacancy_repo import VacancyRepository
@@ -45,7 +45,7 @@ class VacancyService:
             return VacancyResponse(**vacancy)
         vacancy = await self.vacancy_repo.patch_vacancy(vacancy_id, data_dict)
         return VacancyResponse(**vacancy)
-    
+
 
     async def filter_vacancies(self, filters: VacancyFilter) -> VacancyFilterResponse:
         vacancies = await self.vacancy_repo.filter_vacancies(filters)
