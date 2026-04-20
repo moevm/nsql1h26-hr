@@ -1,5 +1,7 @@
 FROM python:3.12
 
+RUN apt update && apt install netcat-openbsd -y
+
 WORKDIR /backend
 
 COPY requirements.txt .
@@ -8,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -49,7 +49,7 @@ async def seed():
     for data in USERS:
         existing = await service.get_user_by_email(data["email"])
         if existing:
-            print(f"✅ {data['email']} already exists")
+            print(f"{data['email']} already exists")
             continue
 
         hashed = get_password_hash(data["password"])
@@ -59,7 +59,7 @@ async def seed():
             "password_hash": hashed,
             "role": data["role"],
         })
-        print(f"➕ Created: {user['email']} ({user['role']})")
+        print(f"Created: {user.email} ({user.role})")
 
     # Закрываем драйвер (если есть метод)
     await Neo4jDB.close()
