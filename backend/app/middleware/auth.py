@@ -1,4 +1,3 @@
-# app/middleware/auth.py
 from fastapi import Request, HTTPException, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.security import decode_token
@@ -20,12 +19,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         print(f"[AuthMiddleware] Checking path: {path}")  # отладка
         
-        # Пропускаем публичные пути
         if any(path.startswith(public_path) for public_path in PUBLIC_PATHS):
             print(f"[AuthMiddleware] Path {path} is public, skipping auth")
             return await call_next(request)
         
-        # Проверяем Authorization header
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             print(f"[AuthMiddleware] Missing or invalid auth header for {path}")

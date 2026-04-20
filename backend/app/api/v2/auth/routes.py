@@ -1,4 +1,3 @@
-# app/api/v2/auth/routes.py
 from fastapi import APIRouter, HTTPException, status, Depends
 from neo4j import AsyncDriver
 
@@ -36,9 +35,9 @@ async def login(
         )
     
     token_data = {
-        "sub": str(user.id),          # user.id вместо user["id"]
-        "email": user.email,          # user.email вместо user["email"]
-        "role": user.role,            # user.role вместо user["role"]
+        "sub": str(user.id),          
+        "email": user.email,         
+        "role": user.role,            
     }
     access_token = create_access_token(token_data)
     
