@@ -53,7 +53,7 @@ class InterviewFilter(BaseModel):
     limit: int = Field(default=50, ge=1, le=200)
     offset: int = Field(default=0, ge=0)
     sort_by: InterviewSort = InterviewSort.SCHEDULED_AT
-    sort_order: SortOrder
+    sort_order: SortOrder | None = SortOrder.DESC
 
     model_config = ConfigDict(from_attributes=True)
 
