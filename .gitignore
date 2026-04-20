@@ -1,5 +1,6 @@
 # Secrets
-.env
+# requested to be in repo
+# .env
 
 # database
 */neo4j/data
