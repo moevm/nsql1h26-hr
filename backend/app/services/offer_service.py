@@ -1,6 +1,11 @@
 from uuid import UUID
 from app.repositories.offer_repo import OfferRepository
-from app.models.offer import OfferCreate, OfferResponse, OfferFilter, OfferFilterResponse
+from app.models.offer import (
+    OfferCreate,
+    OfferResponse,
+    OfferFilter,
+    OfferFilterResponse,
+)
 
 
 class OfferService:

@@ -6,7 +6,12 @@ from uuid import UUID
 from app.core.database import get_db
 from app.repositories.offer_repo import OfferRepository
 from app.services.offer_service import OfferService
-from app.models.offer import OfferCreate, OfferResponse, OfferFilter, OfferFilterResponse
+from app.models.offer import (
+    OfferCreate,
+    OfferResponse,
+    OfferFilter,
+    OfferFilterResponse,
+)
 from app.core.security import require_role
 
 router = APIRouter()
@@ -21,7 +26,7 @@ def get_offer_service(driver: AsyncDriver = Depends(get_db)) -> OfferService:
 async def create_offer(
     offer_data: OfferCreate,
     offer_service: OfferService = Depends(get_offer_service),
-    current_user: dict = Depends(require_role('HR'))
+    _: dict = Depends(require_role("HR")),
 ):
     return await offer_service.create_offer(offer_data)
 

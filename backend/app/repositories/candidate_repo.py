@@ -86,7 +86,7 @@ class CandidateRepository:
                     status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
                 } AS candidate_data
                 """,
-                candidate_id=str(candidate_id)
+                candidate_id=str(candidate_id),
             )
             record = await result.single()
             if not record:
@@ -102,7 +102,9 @@ class CandidateRepository:
             where_clauses = []
 
             if filters.full_name:
-                where_clauses.append("toLower(c.full_name) CONTAINS toLower($full_name)")
+                where_clauses.append(
+                    "toLower(c.full_name) CONTAINS toLower($full_name)"
+                )
                 params["full_name"] = filters.full_name
             if filters.email:
                 where_clauses.append("toLower(c.email) CONTAINS toLower($email)")
@@ -111,11 +113,15 @@ class CandidateRepository:
                 where_clauses.append("toLower(c.phone) CONTAINS toLower($phone)")
                 params["phone"] = filters.phone
             if filters.resume_url_contains:
-                where_clauses.append("toLower(c.resume_url) CONTAINS toLower($resume_url_contains)")
+                where_clauses.append(
+                    "toLower(c.resume_url) CONTAINS toLower($resume_url_contains)"
+                )
                 params["resume_url_contains"] = str(filters.resume_url_contains)
 
             if filters.vacancy_id:
-                where_clauses.append("EXISTS { (c)-[:APPLIES]->(v:Vacancy {id: $vacancy_id}) }")
+                where_clauses.append(
+                    "EXISTS { (c)-[:APPLIES]->(v:Vacancy {id: $vacancy_id}) }"
+                )
                 params["vacancy_id"] = str(filters.vacancy_id)
             if filters.vacancy_title:
                 where_clauses.append(
@@ -124,7 +130,9 @@ class CandidateRepository:
                 params["vacancy_title"] = filters.vacancy_title
 
             if filters.test_task_id:
-                where_clauses.append("EXISTS { (c)-[:COMPLETES]->(t:TestTask {id: $test_task_id}) }")
+                where_clauses.append(
+                    "EXISTS { (c)-[:COMPLETES]->(t:TestTask {id: $test_task_id}) }"
+                )
                 params["test_task_id"] = str(filters.test_task_id)
             if filters.test_task_title:
                 where_clauses.append(
@@ -177,5 +185,9 @@ class CandidateRepository:
             if not record:
                 return {"total": 0, "items": []}
 
-            items = [dict(node) for node in record["candidate_data"]] if record["candidate_data"] else []
+            items = (
+                [dict(node) for node in record["candidate_data"]]
+                if record["candidate_data"]
+                else []
+            )
             return {"total": record["total_count"], "items": items}

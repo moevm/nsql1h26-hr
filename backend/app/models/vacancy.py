@@ -5,16 +5,17 @@ from app.models.unix_timestamp import UnixTimestamp
 from app.models.helpers import SortOrder
 from typing import List
 
+
 class VacancyStatus(StrEnum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
 
 
 class VacancySort(StrEnum):
-    TITLE="title"
-    STATUS="status"
-    CREATED_AT="created_at"
-    CLOSED_AT="closed_at"
+    TITLE = "title"
+    STATUS = "status"
+    CREATED_AT = "created_at"
+    CLOSED_AT = "closed_at"
 
 
 class VacancyCreate(BaseModel):
@@ -47,7 +48,9 @@ class VacancyPatch(BaseModel):
 
 class VacancyFilter(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
-    description_contains: str | None = Field(default=None, min_length=1, max_length=5000)
+    description_contains: str | None = Field(
+        default=None, min_length=1, max_length=5000
+    )
     status: VacancyStatus | None = None
     created_at_from: UnixTimestamp | None = None
     created_at_to: UnixTimestamp | None = None

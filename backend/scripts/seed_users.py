@@ -38,6 +38,7 @@ USERS = [
     },
 ]
 
+
 async def seed():
     # Инициализируем драйвер
     await Neo4jDB.connect()
@@ -53,16 +54,19 @@ async def seed():
             continue
 
         hashed = get_password_hash(data["password"])
-        user = await service.create_user({
-            "email": data["email"],
-            "full_name": data["full_name"],
-            "password_hash": hashed,
-            "role": data["role"],
-        })
+        user = await service.create_user(
+            {
+                "email": data["email"],
+                "full_name": data["full_name"],
+                "password_hash": hashed,
+                "role": data["role"],
+            }
+        )
         print(f"Created: {user.email} ({user.role})")
 
     # Закрываем драйвер (если есть метод)
     await Neo4jDB.close()
+
 
 if __name__ == "__main__":
     asyncio.run(seed())

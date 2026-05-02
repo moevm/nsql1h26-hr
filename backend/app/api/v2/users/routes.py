@@ -36,6 +36,7 @@ async def get_user_by_id(
     user = await user_service.get_user_by_id(str(user_id))
     if not user:
         from app.core.exceptions import AppError
+
         raise AppError("User not found", status.HTTP_404_NOT_FOUND)
     return UserResponse(
         id=user.id,
@@ -49,14 +50,16 @@ async def get_user_by_id(
 async def delete_user(
     user_id: UUID,
     user_service: UserService = Depends(get_user_service),
-    current_user: dict = Depends(require_role('ADMIN')),
+    current_user: dict = Depends(require_role("ADMIN")),
 ):
     if str(user_id) == current_user.get("id"):
         from app.core.exceptions import AppError
+
         raise AppError("Cannot delete your own account", status.HTTP_400_BAD_REQUEST)
-    
+
     deleted = await user_service.delete_user(str(user_id))
     if not deleted:
         from app.core.exceptions import AppError
+
         raise AppError("User not found", status.HTTP_404_NOT_FOUND)
     return None

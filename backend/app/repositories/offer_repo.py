@@ -4,7 +4,7 @@ from app.models.offer import (
     OfferCreate,
     OfferResponse,
     OfferFilter,
-    OfferFilterResponse
+    OfferFilterResponse,
 )
 
 
@@ -155,9 +155,7 @@ class OfferRepository:
                 CASE WHEN $sort_by = 'created_at' THEN o.created_at END {sort_order},
                 CASE WHEN $sort_by = 'candidate_name' THEN c.full_name END {sort_order},
                 CASE WHEN $sort_by = 'vacancy_title' THEN v.title END {sort_order}
-            """.replace(
-                "{sort_order}", filters.sort_order
-            )
+            """.replace("{sort_order}", filters.sort_order)
 
             full_query = f"""
             {base_query}

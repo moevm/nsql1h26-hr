@@ -25,17 +25,19 @@ class CandidateSort(StrEnum):
 class CandidateCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
-    phone: str  #workaround
+    phone: str  # workaround
     resume_url: HttpUrl | None = None
     status: CandidateStatus
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
 
-    @field_validator('phone')
+    @field_validator("phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        if not v.startswith('+7') or len(v) != 12 or not v[1:].isdigit():
-            raise ValueError('Phone number must be in format +7XXXXXXXXXX (10 digits after +7)')
+        if not v.startswith("+7") or len(v) != 12 or not v[1:].isdigit():
+            raise ValueError(
+                "Phone number must be in format +7XXXXXXXXXX (10 digits after +7)"
+            )
         return v
 
     model_config = ConfigDict(from_attributes=True)
@@ -45,17 +47,19 @@ class CandidateResponse(BaseModel):
     id: UUID
     full_name: str = Field(min_length=1, max_length=150)
     email: EmailStr
-    phone: str 
+    phone: str
     resume_url: HttpUrl | None = None
     status: CandidateStatus
     vacancy_id: UUID | None = None
     test_task_id: UUID | None = None
 
-    @field_validator('phone')
+    @field_validator("phone")
     @classmethod
     def validate_phone(cls, v: str) -> str:
-        if not v.startswith('+7') or len(v) != 12 or not v[1:].isdigit():
-            raise ValueError('Phone number must be in format +7XXXXXXXXXX (10 digits after +7)')
+        if not v.startswith("+7") or len(v) != 12 or not v[1:].isdigit():
+            raise ValueError(
+                "Phone number must be in format +7XXXXXXXXXX (10 digits after +7)"
+            )
         return v
 
     model_config = ConfigDict(from_attributes=True)

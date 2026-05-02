@@ -43,7 +43,7 @@ class VacancyRepository:
             status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
                 } AS vacancy_data
                 """,
-                id=str(vacancy_id)
+                id=str(vacancy_id),
             )
             record = await result.single()
             return record["vacancy_data"] if record else None
@@ -60,12 +60,9 @@ class VacancyRepository:
             status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
                 } AS vacancy_data
                 """
-            result = await session.run(
-                query, id=str(vacancy_id), props=data
-                )
+            result = await session.run(query, id=str(vacancy_id), props=data)
             record = await result.single()
             return record["vacancy_data"] if record else None
-
 
     async def filter_vacancies(self, filters: VacancyFilter) -> dict:
         async with self.driver.session() as session:
@@ -75,10 +72,7 @@ class VacancyRepository:
             query_base = f"MATCH (v:Vacancy{label_filter})"
 
             where_clauses = []
-            params = {
-                "limit": filters.limit,
-                "offset": filters.offset
-            }
+            params = {"limit": filters.limit, "offset": filters.offset}
 
             if filters.title:
                 where_clauses.append("toLower(v.title) CONTAINS toLower($title)")
@@ -92,7 +86,7 @@ class VacancyRepository:
                 "created_at_from": ("v.created_at >= $c_from", "c_from"),
                 "created_at_to": ("v.created_at <= $c_to", "c_to"),
                 "closed_at_from": ("v.closed_at >= $cl_from", "cl_from"),
-                "closed_at_to": ("v.closed_at <= $cl_to", "cl_to")
+                "closed_at_to": ("v.closed_at <= $cl_to", "cl_to"),
             }
             for key, (clause, param_name) in date_map.items():
                 value = getattr(filters, key, None)
@@ -102,7 +96,9 @@ class VacancyRepository:
 
             if filters.has_test_task is not None:
                 exists_condition = "" if filters.has_test_task else "NOT"
-                where_clauses.append(f"{exists_condition} EXISTS {{ (:TestTask)-[:TEST_FOR]->(v) }}")
+                where_clauses.append(
+                    f"{exists_condition} EXISTS {{ (:TestTask)-[:TEST_FOR]->(v) }}"
+                )
 
             where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -132,5 +128,5 @@ class VacancyRepository:
 
             return {
                 "total": records[0]["total_count"],
-                "items": [r["vacancy_data"] for r in records]
+                "items": [r["vacancy_data"] for r in records],
             }

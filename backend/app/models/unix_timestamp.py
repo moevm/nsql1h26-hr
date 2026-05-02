@@ -7,8 +7,14 @@ from neo4j.time import DateTime as Neo4jDateTime
 def validate_timestamp(v: Any) -> datetime:
     if isinstance(v, Neo4jDateTime):
         return datetime(
-            v.year, v.month, v.day, v.hour, v.minute, v.second,
-            v.nanosecond // 1000, tzinfo=timezone.utc,
+            v.year,
+            v.month,
+            v.day,
+            v.hour,
+            v.minute,
+            v.second,
+            v.nanosecond // 1000,
+            tzinfo=timezone.utc,
         )
     if isinstance(v, (int, float)):
         return datetime.fromtimestamp(v, tz=timezone.utc)

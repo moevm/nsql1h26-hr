@@ -11,7 +11,7 @@ class UserRepository:
     async def get_user_by_email(self, email: str) -> Optional[UserDB]:
         query = """
         MATCH (u:User {email: $email})
-        RETURN u.id as id, u.email as email, u.full_name as full_name, 
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
         result = await self.driver.execute_query(query, email=email)
@@ -29,7 +29,7 @@ class UserRepository:
     async def get_user_by_id(self, user_id: str) -> Optional[UserDB]:
         query = """
         MATCH (u:User {id: $user_id})
-        RETURN u.id as id, u.email as email, u.full_name as full_name, 
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
         result = await self.driver.execute_query(query, user_id=user_id)
@@ -119,12 +119,14 @@ class UserRepository:
 
         items = []
         for record in result.records:
-            items.append({
-                "id": record["id"],
-                "email": record["email"],
-                "full_name": record["full_name"],
-                "role": record["role"],
-            })
+            items.append(
+                {
+                    "id": record["id"],
+                    "email": record["email"],
+                    "full_name": record["full_name"],
+                    "role": record["role"],
+                }
+            )
 
         return {"total": total, "items": items}
 

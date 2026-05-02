@@ -2,6 +2,5 @@ from enum import StrEnum
 
 
 class SortOrder(StrEnum):
-    ASC="asc"
-    DESC="desc"
- 
+    ASC = "asc"
+    DESC = "desc"
