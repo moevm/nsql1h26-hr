@@ -208,16 +208,16 @@ paths:
       summary: Регистрация нового пользователя
       description: |
         Создание новой учетной записи.
-        
+
         **Правила валидации:**
         - Email должен быть уникальным
         - Пароль: минимум 6 символов
         - ФИО: от 3 до 150 символов
-        
+
         **Ролевая модель:**
         - При регистрации через этот эндпоинт роль всегда `HR` (для демо)
         - В production роль должна быть ограничена или требовать подтверждения
-      tags: 
+      tags:
         - Auth
       requestBody:
         required: true
@@ -1207,74 +1207,74 @@ paths:
 
   # ==================== Dashboard ====================
 
-/v2/dashboard/kpi:
-  get:
-    summary: Получение ключевых показателей для дашборда
-    description: |
-      Возвращает 4 основные метрики для отображения на главной панели:
-      - Открытые вакансии
-      - Новые кандидаты (статус NEW)
-      - Предстоящие интервью (статус AWAIT_INTERVIEW)
-      - Офферы на согласовании (статус PENDING)
-      
-      Доступно для всех авторизованных пользователей.
+  /v2/dashboard/kpi:
+    get:
+      summary: Получение ключевых показателей для дашборда
+      description: |
+        Возвращает 4 основные метрики для отображения на главной панели:
+        - Открытые вакансии
+        - Новые кандидаты (статус NEW)
+        - Предстоящие интервью (статус AWAIT_INTERVIEW)
+        - Офферы на согласовании (статус PENDING)
 
-      Для актуальности данных на фронтенде рекомендуется использовать WebScoket или polling
-    tags:
-      - Dashboard
-    security:
-      - BearerAuth: []
-    responses:
-      '200':
-        description: Успешный ответ с метриками
-        headers:
-            Cache-Control:
-              schema:
-                type: string
-                example: "no-cache, no-store, must-revalidate"
-              description: Запрет кэширования для актуальности данных
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - open_vacancies
-                - new_candidates
-                - upcoming_interviews
-                - pending_offers
-              properties:
-                open_vacancies:
-                  type: integer
-                  minimum: 0
-                  description: Количество открытых вакансий (статус OPEN)
-                  example: 15
-                new_candidates:
-                  type: integer
-                  minimum: 0
-                  description: Количество кандидатов в статусе NEW
-                  example: 32
-                upcoming_interviews:
-                  type: integer
-                  minimum: 0
-                  description: Количество предстоящих интервью (статус AWAIT_INTERVIEW)
-                  example: 8
-                pending_offers:
-                  type: integer
-                  minimum: 0
-                  description: Количество офферов на согласовании (статус PENDING)
-                  example: 5
-            example:
-              open_vacancies: 15
-              new_candidates: 32
-              upcoming_interviews: 8
-              pending_offers: 5
-      '401':
-        description: Не авторизован
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                detail:
+        Доступно для всех авторизованных пользователей.
+
+        Для актуальности данных на фронтенде рекомендуется использовать WebScoket или polling
+      tags:
+        - Dashboard
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Успешный ответ с метриками
+          headers:
+              Cache-Control:
+                schema:
                   type: string
-                  example: "Not authenticated"
+                  example: "no-cache, no-store, must-revalidate"
+                description: Запрет кэширования для актуальности данных
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - open_vacancies
+                  - new_candidates
+                  - upcoming_interviews
+                  - pending_offers
+                properties:
+                  open_vacancies:
+                    type: integer
+                    minimum: 0
+                    description: Количество открытых вакансий (статус OPEN)
+                    example: 15
+                  new_candidates:
+                    type: integer
+                    minimum: 0
+                    description: Количество кандидатов в статусе NEW
+                    example: 32
+                  upcoming_interviews:
+                    type: integer
+                    minimum: 0
+                    description: Количество предстоящих интервью (статус AWAIT_INTERVIEW)
+                    example: 8
+                  pending_offers:
+                    type: integer
+                    minimum: 0
+                    description: Количество офферов на согласовании (статус PENDING)
+                    example: 5
+              example:
+                open_vacancies: 15
+                new_candidates: 32
+                upcoming_interviews: 8
+                pending_offers: 5
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Not authenticated"
