@@ -27,7 +27,7 @@ class TestTaskRepository:
             record = await result.single()
             return record["test_task_data"] if record else None
 
-    async def get_test_task_by_id(self, test_task_id: UUID) -> dict:
+    async def get_test_task_by_id(self, test_task_id: dict) -> dict:
         async with self.driver.session() as session:
             result = await session.run(
                 """
@@ -35,6 +35,21 @@ class TestTaskRepository:
                 RETURN t { .*, vacancy_id: v.id } AS test_task_data
                 """,
                 test_task_id=str(test_task_id),
+            )
+            record = await result.single()
+            return record["test_task_data"] if record else None
+
+    async def patch_test_task(
+        self, test_task_id: UUID, test_task_data: TestTaskCreate
+    ) -> dict:
+        async with self.driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (t:TestTask{id: $test_task_id})-[:TEST_FOR]->(v:Vacancy) SET t += $props
+                RETURN t { .*, vacancy_id: v.id } AS test_task_data
+                """,
+                test_task_id=str(test_task_id),
+                props=test_task_data,
             )
             record = await result.single()
             return record["test_task_data"] if record else None

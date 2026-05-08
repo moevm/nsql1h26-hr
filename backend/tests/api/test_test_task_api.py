@@ -211,3 +211,38 @@ async def test_filter_by_title_substring_api(hr_client):
     assert result["total"] == 1
     assert "Python Developer" in result["items"][0]["title"]
     assert result["items"][0]["id"] == task1["id"]
+
+
+async def test_patch_test_task(hr_client):
+    response = await hr_client.post(
+        "/vacancies", json={"title": "Vacancy 1", "description": "Test Description"}
+    )
+    data = response.json()
+    vacancy_id = data["id"]
+
+    response = await hr_client.post(
+        "/test-tasks",
+        json={
+            "title": "old",
+            "test_task_url": "https://old.com",
+            "vacancy_id": str(vacancy_id),
+        },
+    )
+
+    test_task = response.json()
+
+    title = "Test new"
+    test_task_url = "https://2gis.com/"
+
+    response = await hr_client.patch(
+        f"/test-tasks/{test_task["id"]}",
+        json={
+            "title": title,
+            "test_task_url": test_task_url,
+        },
+    )
+    data = response.json()
+    assert response.status_code == 200
+    assert data["title"] == title
+    assert data["test_task_url"] == test_task_url
+    assert data["vacancy_id"] == str(vacancy_id)

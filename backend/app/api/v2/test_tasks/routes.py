@@ -6,7 +6,7 @@ from app.core.database import get_db
 from app.services.test_task_service import TestTaskService
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
-from app.models.test_task import TestTaskCreate, TestTaskResponse, TestTasksFilter, TestTasksFilterResponse
+from app.models.test_task import TestTaskCreate, TestTaskResponse, TestTasksFilter, TestTasksFilterResponse, TestTaskPatch
 from app.core.security import require_role
 
 router = APIRouter()
@@ -54,3 +54,18 @@ async def filter_test_tasks(
 ):
     test_tasks = await test_task_service.filter_test_tasks(filters)
     return test_tasks
+
+
+@router.patch(
+    "/{test_task_id}",
+    response_model=TestTaskResponse,
+    status_code=status.HTTP_200_OK
+)
+async def patch_test_task_by_id(
+    test_task_id: UUID,
+    test_task_data: TestTaskPatch,
+    test_task_service: TestTaskService = Depends(get_test_task_service),
+    _: dict = Depends(require_role("HR")),
+):
+    test_task = await test_task_service.patch_test_task(test_task_id, test_task_data)
+    return test_task

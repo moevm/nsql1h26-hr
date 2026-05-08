@@ -3,6 +3,7 @@ from app.models.test_task import (
     TestTaskResponse,
     TestTasksFilter,
     TestTasksFilterResponse,
+    TestTaskPatch,
 )
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
@@ -45,3 +46,16 @@ class TestTaskService:
     ) -> TestTasksFilterResponse:
         filters = await self.test_task_repo.filter_test_tasks(filters)
         return TestTasksFilterResponse(**filters)
+
+    async def patch_test_task(
+        self, test_task_id: UUID, test_task_data: TestTaskPatch
+    ) -> TestTaskResponse:
+        test_task_dict = test_task_data.model_dump(exclude_unset=True)
+        if test_task_dict.get("test_task_url") is not None:
+            test_task_dict["test_task_url"] = str(test_task_dict["test_task_url"])
+        patched_test_task = await self.test_task_repo.patch_test_task(
+            test_task_id, test_task_dict
+        )
+        if not patched_test_task:
+            raise AppError("Test task not found", status.HTTP_404_NOT_FOUND)
+        return TestTaskResponse(**patched_test_task)
