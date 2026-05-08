@@ -1218,6 +1218,8 @@ paths:
       - Офферы на согласовании (статус PENDING)
       
       Доступно для всех авторизованных пользователей.
+
+      Для актуальности данных на фронтенде рекомендуется использовать WebScoket или polling
     tags:
       - Dashboard
     security:
@@ -1225,6 +1227,12 @@ paths:
     responses:
       '200':
         description: Успешный ответ с метриками
+        headers:
+            Cache-Control:
+              schema:
+                type: string
+                example: "no-cache, no-store, must-revalidate"
+              description: Запрет кэширования для актуальности данных
         content:
           application/json:
             schema:
