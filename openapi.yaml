@@ -205,17 +205,164 @@ paths:
   # ==================== Auth ====================
   /v2/auth/register:
     post:
-      summary: Регистрация пользователя
-      tags: [Auth]
+      summary: Регистрация нового пользователя
+      description: |
+        Создание новой учетной записи.
+        
+        **Правила валидации:**
+        - Email должен быть уникальным
+        - Пароль: минимум 6 символов
+        - ФИО: от 3 до 150 символов
+        
+        **Ролевая модель:**
+        - При регистрации через этот эндпоинт роль всегда `HR` (для демо)
+        - В production роль должна быть ограничена или требовать подтверждения
+      tags: 
+        - Auth
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UserCreate' }
+            schema:
+              type: object
+              required:
+                - email
+                - full_name
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  minLength: 1
+                  maxLength: 255
+                  example: "hr@example.com"
+                  description: "Email пользователя (уникальный)"
+                full_name:
+                  type: string
+                  minLength: 3
+                  maxLength: 150
+                  example: "HR Менеджер"
+                  description: "Полное имя пользователя"
+                password:
+                  type: string
+                  minLength: 6
+                  maxLength: 100
+                  format: password
+                  example: "hr123"
+                  description: "Пароль (минимум 6 символов)"
+                role:
+                  type: string
+                  enum: [ADMIN, HR, TECH_SPEC, MANAGER]
+                  default: HR
+                  description: "Роль пользователя (опционально, по умолчанию HR)"
+            examples:
+              hr_user:
+                summary: "Регистрация HR"
+                value:
+                  email: "hr@example.com"
+                  full_name: "HR Менеджер"
+                  password: "hr123"
+                  role: "HR"
+              tech_spec:
+                summary: "Регистрация техспециалиста"
+                value:
+                  email: "tech@example.com"
+                  full_name: "Технический Специалист"
+                  password: "tech123"
+                  role: "TECH_SPEC"
       responses:
-        '201': { description: Пользователь создан, content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } } }
-        '400': { description: Неверные данные }
-        '409': { description: Email уже существует }
+        '201':
+          description: "Пользователь успешно создан"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: "Уникальный идентификатор пользователя"
+                    example: "262995c7-7fae-4b2f-a1dc-655660154b2e"
+                  email:
+                    type: string
+                    format: email
+                    example: "hr@example.com"
+                  full_name:
+                    type: string
+                    example: "HR Менеджер"
+                  role:
+                    type: string
+                    enum: [ADMIN, HR, TECH_SPEC, MANAGER]
+                    example: "HR"
+              example:
+                id: "262995c7-7fae-4b2f-a1dc-655660154b2e"
+                email: "hr@example.com"
+                full_name: "HR Менеджер"
+                role: "HR"
+        '400':
+          description: "Неверные данные запроса"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    oneOf:
+                      - type: string
+                        example: "Password must be at least 6 characters"
+                      - type: array
+                        items:
+                          type: object
+                          properties:
+                            loc:
+                              type: array
+                              items:
+                                type: string
+                              example: ["body", "email"]
+                            msg:
+                              type: string
+                              example: "value is not a valid email address"
+                            type:
+                              type: string
+                              example: "value_error"
+              examples:
+                invalid_email:
+                  value:
+                    detail: [
+                      {
+                        "loc": ["body", "email"],
+                        "msg": "value is not a valid email address",
+                        "type": "value_error"
+                      }
+                    ]
+                short_password:
+                  value:
+                    detail: "Password must be at least 6 characters"
+                short_name:
+                  value:
+                    detail: "Full name must be at least 3 characters"
+        '409':
+          description: "Конфликт - пользователь с таким email уже существует"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "User with email hr@example.com already exists"
+        '422':
+          description: "Ошибка валидации"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+      security: []  # не требует авторизации
 
   /v2/auth/login:
     post:
