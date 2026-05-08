@@ -943,21 +943,45 @@ paths:
   /v2/analytics/statistics:
     get:
       summary: Данные для диаграммы
-      description: Роль - любая
+      description: |
+        Роль - все, кроме техспециалиста, но при желании можем сделать доступным для всех (на обсуждении)
+        Поддерживается 6 видов графиков в зависимости от комбинации x_axis и y_axis.
+        - x_axis=status, y_axis=count      → распределение кандидатов по статусам
+        - x_axis=status, y_axis=avg_salary → средняя зарплата по статусам
+        - x_axis=vacancy, y_axis=count     → количество кандидатов по вакансиям
+        - x_axis=vacancy, y_axis=avg_salary→ средняя зарплата по вакансиям
+        - x_axis=date, y_axis=count        → динамика количества кандидатов по дням
+        - x_axis=date, y_axis=avg_salary   → динамика средней зарплаты по дням
       tags: [Analytics]
       security: [{ BearerAuth: [] }]
       parameters:
         - name: vacancy_id
           in: query
-          schema: { type: string, format: uuid }
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по конкретной вакансии (опционально)
         - name: x_axis
           in: query
           required: true
-          schema: { type: string, enum: [status, vacancy, date] }
+          schema:
+            type: string
+            enum: [status, vacancy, date]
+          description: |
+            Группировка данных:
+            - status — по статусу кандидата
+            - vacancy — по вакансии
+            - date — по дням (в labels возвращается строка YYYY-MM-DD)
         - name: y_axis
           in: query
           required: true
-          schema: { type: string, enum: [count, avg_salary] }
+          schema:
+            type: string
+            enum: [count, avg_salary]
+          description: |
+            Показываемое значение:
+            - count — количество кандидатов
+            - avg_salary — средняя зарплата по офферам (для кандидатов, у которых есть оффер)
       responses:
         '200':
           description: OK
@@ -966,8 +990,36 @@ paths:
               schema:
                 type: object
                 properties:
-                  labels: { type: array, items: { type: string } }
-                  values: { type: array, items: { type: number } }
+                  total:
+                    type: number
+                    nullable: true
+                    description: |
+                      Сумма значений в поле `values` для y_axis=count.
+                      Для y_axis=avg_salary возвращается null.
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: |
+                      Подписи оси X:
+                      - при x_axis=status — названия статусов (например, NEW, INTERVIEW, OFFER)
+                      - при x_axis=vacancy — названия вакансий
+                      - при x_axis=date — даты в формате YYYY-MM-DD
+                  values:
+                    type: array
+                    items:
+                      type: number
+                    description: |
+                      Числовые значения оси Y:
+                      - при y_axis=count — целые числа (количество кандидатов)
+                      - при y_axis=avg_salary — числа с плавающей точкой (средняя зарплата)
+                required: [labels, values]
+        '400':
+          description: Некорректная комбинация параметров (например, date+avg_salary, если нет данных)
+        '401':
+          description: Не авторизован
+        '404':
+          description: id не найден
 
   # ==================== Admin & Backup ====================
   /v2/admin/backup:
