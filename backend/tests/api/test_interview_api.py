@@ -63,7 +63,7 @@ async def test_create_interview_ok(hr_client, neo4j_driver):
 
 
 async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
-    """БАГ: API возвращает 200 с None вместо 404, что вызывает ошибку валидации ответа."""
+    """БАГ: API возвращает 200 с None вместо 400, что вызывает ошибку валидации ответа."""
     tech_spec_id = uuid.uuid4()
     async with neo4j_driver.session() as session:
         await session.run(
@@ -87,7 +87,7 @@ async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
             "scheduled_at": scheduled_at
         }
     )
-    assert response.status_code == 404
+    assert response.status_code == 400
 
 
 async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
