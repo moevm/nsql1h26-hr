@@ -653,3 +653,13 @@ async def test_filter_interviews_combined_filters(
     assert result.total == 1
     assert result.items[0].candidate_id == c1_id
     assert result.items[0].result == InterviewResult.INTERVIEW_PASSED
+
+
+async def test_filter_by_date_range(interview_service):
+    result = await interview_service.filter_interviews(
+        InterviewFilter(
+            scheduled_at_from=1000,
+            scheduled_at_to=2000
+        )
+    )
+    assert all(1000 <= i.scheduled_at <= 2000 for i in result.items)

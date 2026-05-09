@@ -326,3 +326,16 @@ async def test_create_interview_missing_required_fields(hr_client, missing_field
     
     response = await hr_client.post("/interviews", json=invalid_data)
     assert response.status_code == 422
+
+
+async def test_filter_interviews_api_invalid_date_range_returns_400(hr_client):
+    """API должен возвращать 400 при некорректном диапазоне дат"""
+    response = await hr_client.get(
+        "/interviews",
+        params={
+            "scheduled_at_from": 2000,
+            "scheduled_at_to": 1000
+        }
+    )
+    assert response.status_code == 400
+    assert "scheduled_at_from must be <= scheduled_at_to" in response.text
