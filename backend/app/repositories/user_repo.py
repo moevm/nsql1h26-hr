@@ -1,7 +1,7 @@
 from neo4j import AsyncDriver
 from uuid import uuid4
 from typing import Optional
-from app.models.user import UserDB, UserFilter
+from app.models.user import UserDB, UserFilter, UserCreate
 
 
 class UserRepository:
@@ -44,25 +44,25 @@ class UserRepository:
             )
         return None
 
-    async def create_user(self, user_data: dict) -> UserDB:
+    async def create_user(self, user_data: UserCreate) -> UserDB:
         user_id = str(uuid4())
-        query = """
-        CREATE (u:User {
+        query = f"""
+        CREATE (u:User:{user_data.role} {{
             id: $id,
             email: $email,
             full_name: $full_name,
             password_hash: $password_hash,
             role: $role
-        })
+        }})
         RETURN u.id as id, u.email as email, u.full_name as full_name, u.role as role
         """
         result = await self.driver.execute_query(
             query,
             id=user_id,
-            email=user_data["email"],
-            full_name=user_data["full_name"],
-            password_hash=user_data["password_hash"],
-            role=user_data["role"],
+            email=user_data.email,
+            full_name=user_data.full_name,
+            password_hash=user_data.password_hash,
+            role=user_data.role,
         )
         record = result.records[0]
         return UserDB(
