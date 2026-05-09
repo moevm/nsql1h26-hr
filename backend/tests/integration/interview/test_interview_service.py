@@ -13,6 +13,15 @@ from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.user_repo import UserRepository
 from app.core.exceptions import AppError
 
+from app.models.user import UserCreate, Role
+from app.services.user_service import UserService
+
+# Добавить фикстуру user_service
+@pytest.fixture
+async def user_service(user_repo):
+    return UserService(user_repo)
+
+
 @pytest.fixture
 async def vacancy_repo(neo4j_driver):
     return VacancyRepository(neo4j_driver)
@@ -61,19 +70,16 @@ async def test_candidate(candidate_repo, test_vacancy):
 
 
 @pytest.fixture
-async def tech_spec_user(neo4j_driver):
-    user_id = uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(user_id), email="tech.service@example.com", full_name="Tech Service", hash="hash"
+async def tech_spec_user(user_service):
+    user = await user_service.create_user(
+        UserCreate(
+            email="tech.service@example.com",
+            full_name="Tech Service",
+            password="hash123456",  # В тестах пароль не важен, т.к. хэширование не реализовано
+            role=Role.TECH_SPEC
         )
-    return user_id
+    )
+    return user.id 
 
 
 async def test_create_interview_ok(interview_service, test_candidate, tech_spec_user):
@@ -147,18 +153,16 @@ async def test_get_interview_by_id_not_found(interview_service):
         assert ex.value.args[1] == status.HTTP_404_NOT_FOUND
 
 
-async def test_filter_interviews_ok(interview_service, test_candidate, tech_spec_user, neo4j_driver):
-    tech_spec_2 = uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_spec_2), email="tech2@service.com", full_name="Tech Two", hash="hash"
+async def test_filter_interviews_ok(user_service, interview_service, test_candidate, tech_spec_user, neo4j_driver):
+    tech_spec_2_user = await user_service.create_user(
+        UserCreate(
+            email="tech2@service.com",
+            full_name="Tech Two",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_spec_2 = tech_spec_2_user.id
 
     now = datetime.now(timezone.utc)
     interview1 = await interview_service.create_interview(
@@ -188,7 +192,6 @@ async def test_filter_interviews_ok(interview_service, test_candidate, tech_spec
 
     filters = InterviewFilter(result=InterviewResult.INTERVIEW_PASSED)
     result = await interview_service.filter_interviews(filters)
-    # Следующая строка упадёт с ValidationError из-за бага в репозитории
     assert result.total == 1
     assert result.items[0].result == InterviewResult.INTERVIEW_PASSED
 
@@ -288,30 +291,27 @@ async def test_filter_interviews_by_candidate_name(
 
 
 async def test_filter_interviews_by_tech_spec_name(
-    interview_service, test_candidate, neo4j_driver
+    user_service, interview_service, test_candidate, neo4j_driver
 ):
     """Фильтр по подстроке в имени технического специалиста."""
-    tech_a = uuid4()
-    tech_b = uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_a), email="alpha@example.com", full_name="Tech Alpha", hash="hash"
+    tech_a_user = await user_service.create_user(
+        UserCreate(
+            email="alpha@example.com",
+            full_name="Tech Alpha",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_b), email="beta@example.com", full_name="Tech Beta", hash="hash"
+    )
+    tech_b_user = await user_service.create_user(
+        UserCreate(
+            email="beta@example.com",
+            full_name="Tech Beta",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_a = tech_a_user.id
+    tech_b = tech_b_user.id
 
     now = datetime.now(timezone.utc)
     await interview_service.create_interview(
@@ -524,35 +524,32 @@ async def test_filter_interviews_sorting_by_candidate_name(
     result = await interview_service.filter_interviews(filters)
     assert result.total == 2
     # Anna должна идти раньше Zoe
-    assert result.items[0].candidate_id == c2_id   # Anna
-    assert result.items[1].candidate_id == c1_id   # Zoe
+    assert result.items[0].candidate_id == c2_id
+    assert result.items[1].candidate_id == c1_id
 
 
 async def test_filter_interviews_sorting_by_tech_spec_name(
-    interview_service, test_candidate, neo4j_driver
+    interview_service, test_candidate, user_service
 ):
     """Сортировка по имени технического специалиста (по возрастанию)."""
-    tech_z = uuid4()
-    tech_a = uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_z), email="z@example.com", full_name="Zoe Tech", hash="hash"
+    tech_z_user = await user_service.create_user(
+        UserCreate(
+            email="z@example.com",
+            full_name="Zoe Tech",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_a), email="a@example.com", full_name="Anna Tech", hash="hash"
+    )
+    tech_a_user = await user_service.create_user(
+        UserCreate(
+            email="a@example.com",
+            full_name="Anna Tech",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_z = tech_z_user.id
+    tech_a = tech_a_user.id
 
     now = datetime.now(timezone.utc)
     await interview_service.create_interview(
