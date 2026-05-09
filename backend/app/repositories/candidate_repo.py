@@ -11,6 +11,7 @@ from app.models.candidate import (
 class CandidateRepository:
     def __init__(self, driver: AsyncDriver):
         self.driver = driver
+        self.statuses = ", ".join(f"'{c}'" for c in CandidateStatus)
 
     async def create_candidate(self, candidate_data: CandidateCreate) -> dict:
         async with self.driver.session() as session:
@@ -59,16 +60,16 @@ class CandidateRepository:
 
             candidate_id = record["id"]
 
-            get_query = """
-                MATCH (c:Candidate {id: $candidate_id})
+            get_query = f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                RETURN c {
+                RETURN c {{
                     .*,
                     vacancy_id: v.id,
                     test_task_id: t.id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-                } AS candidate_data
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
             """
             result = await session.run(get_query, candidate_id=candidate_id)
             record = await result.single()
@@ -80,16 +81,16 @@ class CandidateRepository:
     async def get_candidate_by_id(self, candidate_id: UUID) -> dict:
         async with self.driver.session() as session:
             result = await session.run(
-                """
-                MATCH (c:Candidate {id: $candidate_id})
+                f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                RETURN c {
+                RETURN c {{
                     .*,
                     vacancy_id: v.id,
                     test_task_id: t.id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-                } AS candidate_data
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
                 """,
                 candidate_id=str(candidate_id),
             )
@@ -154,7 +155,6 @@ class CandidateRepository:
                 await tx.rollback()
                 raise
 
-            statuses = ", ".join(f"'{c}'" for c in CandidateStatus)
             result = await session.run(
                 f"""
                 MATCH (c:Candidate {{id: $candidate_id}})
@@ -164,7 +164,7 @@ class CandidateRepository:
                     .*,
                     vacancy_id: v.id,
                     test_task_id: t.id,
-                    status: [label IN labels(c) WHERE label IN [{statuses}]][0]
+                    status: [label IN labels(c) WHERE label IN [{self.statuses}]][0]
                 }} AS candidate_data
                 """,
                 candidate_id=str(candidate_id),
@@ -255,7 +255,7 @@ class CandidateRepository:
                     .*,
                     vacancy_id: vacancy_id,
                     test_task_id: test_task_id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
                 }}) AS items
                 RETURN total_count, items[$offset..$offset + $limit] AS candidate_data
             """

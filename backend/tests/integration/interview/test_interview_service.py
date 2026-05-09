@@ -685,7 +685,7 @@ async def test_filter_interviews_combined_filters(
 
 
 async def test_patch_interview_to_failed(
-    interview_service, test_candidate, tech_spec_user
+    interview_service, candidate_service, test_candidate, tech_spec_user
 ):
     scheduled_at = datetime.now(timezone.utc) + timedelta(days=1)
     interview_data = InterviewCreate(
@@ -701,6 +701,7 @@ async def test_patch_interview_to_failed(
         feedback="Good, Anakin, good", result=InterviewResult.INTERVIEW_FAILED
     )
     patched = await interview_service.patch_interview(created.id, patch)
+    candidate = await candidate_service.get_candidate_by_id(interview_data.candidate_id)
     assert patched is not None
     assert patched.id is not None
     assert patched.candidate_id == test_candidate["id"]
@@ -709,6 +710,7 @@ async def test_patch_interview_to_failed(
     assert str(patched.zoom_url) == "https://zoom.us/test"
     assert patched.result == patch.result
     assert patched.feedback == patch.feedback
+    assert candidate.status == CandidateStatus.REJECTED
 
 
 async def test_patch_interview_to_passed(
@@ -737,7 +739,9 @@ async def test_patch_interview_to_passed(
     assert str(patched.zoom_url) == "https://zoom.us/test"
     assert patched.result == patch.result
     assert patched.feedback == patch.feedback
-    assert candidate.status == CandidateStatus.OFFER
+    assert candidate.status == CandidateStatus.INTERVIEW_PASSED
+
+
 async def test_filter_by_date_range(interview_service):
     result = await interview_service.filter_interviews(
         InterviewFilter(
