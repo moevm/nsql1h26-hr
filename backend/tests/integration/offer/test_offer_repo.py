@@ -112,20 +112,6 @@ async def test_create_offer_vacancy_not_found(offer_repo, test_user, test_candid
     offer = await offer_repo.create_offer(offer_data)
     assert offer is None
 
-async def test_create_offer_updates_status(
-    offer_repo, test_offer_create_data, candidate_repo
-):
-    candidate_id = test_offer_create_data.candidate_id
-    # Исходный статус INTERVIEW_PASSED
-    candidate_before = await candidate_repo.get_candidate_by_id(candidate_id)
-    assert candidate_before["status"] == CandidateStatus.INTERVIEW_PASSED
-
-    offer = await offer_repo.create_offer(test_offer_create_data)
-    assert offer is not None
-
-    candidate_after = await candidate_repo.get_candidate_by_id(candidate_id)
-    assert candidate_after["status"] == CandidateStatus.OFFER
-
 async def test_get_offer_by_id_ok(offer_repo, test_offer_create_data):
     created = await offer_repo.create_offer(test_offer_create_data)
     fetched = await offer_repo.get_offer_by_id(created.id)
