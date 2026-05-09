@@ -8,7 +8,10 @@ from app.models.interview import (
     InterviewResponse,
     InterviewFilter,
     InterviewFilterResponse,
+    InterviewPatch,
+    InterviewResult
 )
+from app.models.candidate import CandidateStatus
 from app.core.exceptions import AppError
 
 
@@ -41,3 +44,15 @@ class InterviewService:
     ) -> InterviewFilterResponse:
         result = await self.interview_repo.filter_interviews(filters)
         return result
+
+    async def patch_interview(
+        self, interview_id: UUID, patch: InterviewPatch
+    ) -> InterviewResponse:
+        interview = await self.interview_repo.get_interview_by_id(interview_id)
+        if not interview:
+            raise AppError("interview not found", status.HTTP_404_NOT_FOUND)
+        patch_raw = patch.model_dump()
+        patched_interview = await self.interview_repo.patch_interview(interview_id, patch_raw)
+        if patch.result == InterviewResult.INTERVIEW_PASSED:
+            await self.candidate_repo.patch_candidate(patched_interview.candidate_id, { "status": CandidateStatus.OFFER })
+        return patched_interview
