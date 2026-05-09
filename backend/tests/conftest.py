@@ -72,48 +72,45 @@ async def auth_client(async_client, neo4j_driver):
     return async_client
 
 
+async def create_client_with_role(role: str, email: str):
+    """Создаёт отдельный экземпляр клиента"""
+    user_id = str(uuid.uuid4())
+    token_data = {"sub": user_id, "email": email, "role": role}
+    token = create_access_token(token_data)
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test/api/v2",
+        headers={"Authorization": f"Bearer {token}"}
+    ) as client:
+        yield client
+
 # Клиенты с конкретными ролями
 
 
 @pytest.fixture
 async def admin_client(async_client, neo4j_driver):
     """Клиент с предустановленным токеном авторизации."""
-    user_id = str(uuid.uuid4())
-    token_data = {"sub": user_id, "email": "admin@example.com", "role": "ADMIN"}
-
-    token = create_access_token(token_data)
-    async_client.headers.update({"Authorization": f"Bearer {token}"})
-    return async_client
+    async for client in create_client_with_role("ADMIN", "admin@example.com"):
+        yield client
 
 
 @pytest.fixture
 async def hr_client(async_client, neo4j_driver):
     """Клиент с предустановленным токеном авторизации."""
-    user_id = str(uuid.uuid4())
-    token_data = {"sub": user_id, "email": "hr@example.com", "role": "HR"}
-
-    token = create_access_token(token_data)
-    async_client.headers.update({"Authorization": f"Bearer {token}"})
-    return async_client
+    async for client in create_client_with_role("HR", "hr@example.com"):
+        yield client
 
 
 @pytest.fixture
 async def manager_client(async_client, neo4j_driver):
     """Клиент с предустановленным токеном авторизации."""
-    user_id = str(uuid.uuid4())
-    token_data = {"sub": user_id, "email": "manager@example.com", "role": "MANAGER"}
-
-    token = create_access_token(token_data)
-    async_client.headers.update({"Authorization": f"Bearer {token}"})
-    return async_client
+    async for client in create_client_with_role("MANAGER", "manager@example.com"):
+        yield client
 
 
 @pytest.fixture
 async def tech_spec_client(async_client, neo4j_driver):
     """Клиент с предустановленным токеном авторизации."""
-    user_id = str(uuid.uuid4())
-    token_data = {"sub": user_id, "email": "tech_spec@example.com", "role": "TECH_SPEC"}
-
-    token = create_access_token(token_data)
-    async_client.headers.update({"Authorization": f"Bearer {token}"})
-    return async_client
+    async for client in create_client_with_role("TECH_SPEC", "admin@example.com"):
+        yield client

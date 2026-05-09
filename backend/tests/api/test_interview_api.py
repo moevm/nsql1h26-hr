@@ -23,19 +23,19 @@ async def test_tech_spec(user_service):
             email=f"tech_{uuid.uuid4()}@test.com",
             full_name="Test Tech Spec",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     return user
 
 
-async def test_create_interview_ok(hr_client, user_service):
+async def test_create_interview_ok(hr_client,  user_service):
     tech_spec = await user_service.create_user(
         UserCreate(
             email="tech_api@test.com",
             full_name="Tech API",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     tech_spec_id = tech_spec.id
@@ -92,7 +92,7 @@ async def test_create_interview_candidate_not_found(hr_client, user_service):
             email="tech_api2@test.com",
             full_name="Tech API 2",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     tech_spec_id = tech_spec.id
@@ -117,7 +117,7 @@ async def test_get_interview_by_id_ok(hr_client, user_service):
             email="tech_api3@test.com",
             full_name="Tech API 3",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     tech_spec_id = tech_spec.id
@@ -175,7 +175,7 @@ async def test_filter_interviews_ok(hr_client, user_service):
             email="tech_f1@test.com",
             full_name="Tech Filter 1",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     tech_spec_2 = await user_service.create_user(
@@ -183,7 +183,7 @@ async def test_filter_interviews_ok(hr_client, user_service):
             email="tech_f2@test.com",
             full_name="Tech Filter 2",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
 
@@ -245,7 +245,7 @@ async def test_filter_interviews_by_date(hr_client, user_service):
             email="tech_date@test.com",
             full_name="Tech Date",
             password="hash123456",
-            role=Role.TECH_SPEC
+            role=Role.TECH_SPEC,
         )
     )
     tech_spec_id = tech_spec.id
@@ -291,7 +291,7 @@ async def test_filter_interviews_by_date(hr_client, user_service):
 
 
 async def test_create_interview_tech_spec_not_found(hr_client, user_service):
-    """Ожидаем 400, если tech_spec не найден """
+    """Ожидаем 400, если tech_spec не найден"""
 
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
@@ -325,11 +325,9 @@ async def test_create_interview_tech_spec_not_found(hr_client, user_service):
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize("missing_field", [
-    "candidate_id",
-    "tech_spec_id",
-    "scheduled_at"
-])
+@pytest.mark.parametrize(
+    "missing_field", ["candidate_id", "tech_spec_id", "scheduled_at"]
+)
 async def test_create_interview_missing_required_fields(hr_client, missing_field):
     """При отсутствии обязательного поля возвращается 422."""
     valid_data = {
@@ -351,3 +349,68 @@ async def test_filter_interviews_api_invalid_date_range_returns_400(hr_client):
     )
     assert response.status_code == 400
     assert "scheduled_at_from must be <= scheduled_at_to" in response.text
+
+
+async def test_patch_interview(hr_client, tech_spec_client, user_service):
+    tech_spec = await user_service.create_user(
+        UserCreate(
+            email="tech_api@test.com",
+            full_name="Tech API",
+            password="hash123456",
+            role=Role.TECH_SPEC,
+        )
+    )
+    tech_spec_id = tech_spec.id
+
+    vacancy_resp = await hr_client.post(
+        "/vacancies",
+        json={"title": "Interview Vacancy", "description": "For interview testing"},
+    )
+    assert vacancy_resp.status_code == 201
+    vacancy_id = vacancy_resp.json()["id"]
+
+    candidate_resp = await hr_client.post(
+        "/candidates",
+        json={
+            "full_name": "Interview Candidate",
+            "email": "interview@example.com",
+            "phone": "+71234567890",
+            "status": "NEW",
+            "vacancy_id": vacancy_id,
+            "resume_url": "https://example.com/resume.pdf",
+        },
+    )
+    assert candidate_resp.status_code == 201
+    candidate_id = candidate_resp.json()["id"]
+
+    scheduled_at = datetime.now(timezone.utc) + timedelta(days=1)
+    scheduled_at_iso = scheduled_at.isoformat()
+    scheduled_at_timestamp = int(scheduled_at.timestamp())
+
+    response = await hr_client.post(
+        "/interviews",
+        json={
+            "candidate_id": candidate_id,
+            "tech_spec_id": str(tech_spec_id),
+            "scheduled_at": scheduled_at_iso,
+            "zoom_url": "https://zoom.us/test",
+            "result": "AWAIT_INTERVIEW",
+        },
+    )
+    interview_id = response.json()["id"]
+    response = await tech_spec_client.patch(
+        f"/interviews/{interview_id}",
+        json={
+            "feedback": "cool",
+            "result": "INTERVIEW_PASSED",
+        },
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] is not None
+    assert data["candidate_id"] == candidate_id
+    assert data["tech_spec_id"] == str(tech_spec_id)
+    assert data["scheduled_at"] == scheduled_at_timestamp
+    assert data["zoom_url"] == "https://zoom.us/test"
+    assert data["result"] == "INTERVIEW_PASSED"
+    assert data["feedback"] == "cool"
