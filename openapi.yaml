@@ -1025,7 +1025,7 @@ paths:
         '403': { description: Недостаточно прав (требуется MANAGER, HR или ADMIN) }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
-      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER. Создавать оффер можно только для кандидата без офферов в статусе INTERVIEW_PASSED
+      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER. Создавать оффер можно только для кандидата в статусе INTERVIEW_PASSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -1039,7 +1039,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OfferResponse' }
-        '400': { description: Кандидат не в статусе INTERVIEW_PASSED или уже есть активный оффер }
+        '400': { description: Кандидат не в статусе INTERVIEW_PASSED }
 
   /v2/offers/{id}:
     get:
