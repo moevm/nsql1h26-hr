@@ -1149,7 +1149,7 @@ paths:
                       type: string
                     description: |
                       Подписи оси X:
-                      - при x_axis=status — названия статусов (например, NEW, INTERVIEW, OFFER)
+                      - при x_axis=status — названия статусов (например, NEW, INTERVIEW_PASSED, OFFER)
                       - при x_axis=vacancy — названия вакансий
                       - при x_axis=date — даты в формате YYYY-MM-DD
                   values:
