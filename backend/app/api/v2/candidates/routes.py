@@ -12,6 +12,7 @@ from app.models.candidate import (
     CandidateResponse,
     CandidateFilterResponse,
     CandidateFilter,
+    CandidatePatch,
 )
 from app.core.security import require_role
 
@@ -53,3 +54,16 @@ async def filter_test_tasks(
 ):
     candidates = await candidate_service.filter_candidates(filters)
     return candidates
+
+
+@router.patch(
+    "/{candidate_id}", response_model=CandidateResponse, status_code=status.HTTP_200_OK
+)
+async def patch_candidate(
+    candidate_id: UUID,
+    patch_data: CandidatePatch,
+    candidate_service: CandidateService = Depends(get_candidate_service),
+    _: dict = Depends(require_role("HR")),
+):
+    candidate = await candidate_service.patch_candidate(candidate_id, patch_data)
+    return candidate

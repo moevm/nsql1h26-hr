@@ -1,6 +1,11 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.candidate import CandidateStatus, CandidateCreate, CandidateSort, CandidateFilter
+from app.models.candidate import (
+    CandidateStatus,
+    CandidateCreate,
+    CandidateSort,
+    CandidateFilter,
+)
 
 
 class CandidateRepository:
@@ -105,38 +110,43 @@ class CandidateRepository:
                 if candidate_data:
                     await tx.run(
                         "MATCH (c:Candidate {id: $id}) SET c += $props",
-                        id=str(candidate_id), props=candidate_data
+                        id=str(candidate_id),
+                        props=candidate_data,
                     )
                 if new_status:
-                    remove_labels = " REMOVE " + ", ".join(f"c:{s}" for s in CandidateStatus)
+                    remove_labels = " REMOVE " + ", ".join(
+                        f"c:{s}" for s in CandidateStatus
+                    )
                     set_label = f" SET c:{new_status}"
                     await tx.run(
                         f"MATCH (c:Candidate {{id: $id}}){remove_labels}{set_label}",
-                        id=str(candidate_id)
+                        id=str(candidate_id),
                     )
 
                 if vacancy_id is not None:
                     await tx.run(
                         "MATCH (c:Candidate {id: $id})-[r:APPLIES]->() DELETE r",
-                        id=str(candidate_id)
+                        id=str(candidate_id),
                     )
                     if vacancy_id:
                         await tx.run(
                             "MATCH (c:Candidate {id: $id}), (v:Vacancy {id: $vid}) "
                             "CREATE (c)-[:APPLIES]->(v)",
-                            id=str(candidate_id), vid=str(vacancy_id)
+                            id=str(candidate_id),
+                            vid=str(vacancy_id),
                         )
 
                 if test_task_id is not None:
                     await tx.run(
                         "MATCH (c:Candidate {id: $id})-[r:COMPLETES]->() DELETE r",
-                        id=str(candidate_id)
+                        id=str(candidate_id),
                     )
                     if test_task_id:
                         await tx.run(
                             "MATCH (c:Candidate {id: $id}), (t:TestTask {id: $tid}) "
                             "CREATE (c)-[:COMPLETES]->(t)",
-                            id=str(candidate_id), tid=str(test_task_id)
+                            id=str(candidate_id),
+                            tid=str(test_task_id),
                         )
 
                 await tx.commit()
@@ -157,7 +167,7 @@ class CandidateRepository:
                     status: [label IN labels(c) WHERE label IN [{statuses}]][0]
                 }} AS candidate_data
                 """,
-                candidate_id=str(candidate_id)
+                candidate_id=str(candidate_id),
             )
             record = await result.single()
             if not record:
