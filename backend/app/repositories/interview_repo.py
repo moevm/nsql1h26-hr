@@ -128,8 +128,8 @@ class InterviewRepository:
 
             universal_query = f"""
             MATCH (i:Interview)
-            OPTIONAL MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
-            OPTIONAL MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
+            MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
+            MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
             {where_str}
             WITH i, c, u
             ORDER BY

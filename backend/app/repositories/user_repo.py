@@ -14,7 +14,7 @@ class UserRepository:
         RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
-        result = await self.driver.execute_query(query, email=email)
+        result = await self.driver.execute_query(query, email=str(email))
         if result.records:
             record = result.records[0]
             return UserDB(
@@ -32,7 +32,7 @@ class UserRepository:
         RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
-        result = await self.driver.execute_query(query, user_id=user_id)
+        result = await self.driver.execute_query(query, user_id=str(user_id))
         if result.records:
             record = result.records[0]
             return UserDB(
