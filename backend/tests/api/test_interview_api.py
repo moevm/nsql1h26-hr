@@ -277,19 +277,19 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
 
 async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
     """Ожидаем 400, если tech_spec не найден (спецификация)."""
+    
     vacancy_resp = await hr_client.post(
-        "/vacancies", json={"title": "Tech Spec NotFound Vacancy", "description": "Test"}
+        "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
     )
     assert vacancy_resp.status_code == 201
     vacancy_id = vacancy_resp.json()["id"]
-
     candidate_resp = await hr_client.post(
         "/candidates",
         json={
-            "full_name": "Test Candidate",
-            "email": "test_candidate@example.com",
+            "full_name": "Date Candidate",
+            "email": "date@ex.com",
             "phone": "+71234567890",
-            "status": "TEST", 
+            "status": "NEW",
             "vacancy_id": vacancy_id
         }
     )
