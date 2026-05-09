@@ -1,4 +1,5 @@
 import pytest
+from fastapi import status
 from uuid import uuid4, UUID
 from datetime import datetime, timedelta, timezone
 from app.models.offer import OfferCreate, OfferStatus, OfferFilter
@@ -11,6 +12,7 @@ from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.user_repo import UserRepository
 from app.services.user_service import UserService
+from app.core.exceptions import AppError
 
 
 @pytest.fixture
@@ -39,9 +41,8 @@ async def user_service(user_repo):
 
 
 @pytest.fixture
-async def offer_service(offer_repo):
-    """Сервис принимает только offer_repo"""
-    return OfferService(offer_repo)
+async def offer_service(offer_repo, candidate_repo, vacancy_repo):
+    return OfferService(offer_repo, candidate_repo, vacancy_repo)
 
 
 @pytest.fixture
@@ -104,7 +105,7 @@ async def test_create_offer_updates_status(
 ):
     """После создания оффера статус кандидата должен стать OFFER"""
     candidate_id = test_offer_create_data.candidate_id
-    
+
     # Проверяем статус ДО
     candidate_before = await candidate_repo.get_candidate_by_id(candidate_id)
     assert candidate_before["status"] == CandidateStatus.INTERVIEW_PASSED
@@ -126,5 +127,42 @@ async def test_get_offer_by_id_ok(offer_service, test_offer_create_data):
 
 
 async def test_get_offer_by_id_not_found(offer_service):
-    result = await offer_service.get_offer_by_id(uuid4())
-    assert result is None
+    with pytest.raises(AppError) as ex:
+        await offer_service.get_offer_by_id(uuid4())
+        assert ex.value.args[1] == status.HTTP_404_NOT_FOUND
+
+
+async def test_create_offer_candidate_not_found(offer_service, test_user, test_vacancy):
+    """Создание оффера для несуществующего кандидата"""
+    start_at = datetime.now(timezone.utc) + timedelta(days=30)
+    offer_data = OfferCreate(
+        candidate_id=uuid4(),  # несуществующий ID
+        vacancy_id=UUID(test_vacancy["id"]),
+        created_by=test_user.id,
+        salary=100000,
+        start_at=start_at,
+    )
+    with pytest.raises(AppError) as ex:
+        await offer_service.create_offer(offer_data)
+        assert ex.value.args[1] == status.HTTP_400_BAD_REQUEST
+
+
+async def test_create_offer_vacancy_not_found(offer_service, test_user, test_candidate):
+    """Создание оффера для несуществующей вакансии"""
+    start_at = datetime.now(timezone.utc) + timedelta(days=30)
+    offer_data = OfferCreate(
+        candidate_id=test_candidate["id"],
+        vacancy_id=uuid4(),  # несуществующий ID
+        created_by=test_user.id,
+        salary=100000,
+        start_at=start_at,
+    )
+    with pytest.raises(AppError) as ex:
+        await offer_service.create_offer(offer_data)
+        assert ex.value.args[1] == status.HTTP_400_BAD_REQUEST
+
+
+async def test_get_offer_by_id_not_found(offer_service):
+    with pytest.raises(AppError) as ex:
+        await offer_service.get_offer_by_id(uuid4())
+        assert ex.value.args[1] == status.HTTP_404_NOT_FOUND

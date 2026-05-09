@@ -18,7 +18,7 @@ class OfferRepository:
         async with self.driver.session() as session:
             result = await session.run(
                 f"""
-                MATCH (u:User:{offer_data.status} {{id: $created_by}})
+                MATCH (u:User {{id: $created_by}})
                 MATCH (c:Candidate {{id: $candidate_id}})
                 MATCH (v:Vacancy {{id: $vacancy_id}})
                 CREATE (o:Offer:{OfferStatus.PENDING} {{
@@ -45,22 +45,22 @@ class OfferRepository:
                 start_at=offer_data.start_at
             )
             record = await result.single()
-            return OfferResponse(**record["offer_data"])
+            return OfferResponse(**record["offer_data"]) if record else None
 
     async def get_offer_by_id(self, offer_id: UUID) -> OfferResponse | None:
         async with self.driver.session() as session:
             result = await session.run(
-                """
-                MATCH (u:User)-[:CREATES]->(o:Offer {id: $offer_id})
+                f"""
+                MATCH (u:User)-[:CREATES]->(o:Offer {{id: $offer_id}})
                 OPTIONAL MATCH (o)-[:OFFERED]->(c:Candidate)
                 OPTIONAL MATCH (o)-[:CLOSES]->(v:Vacancy)
-                RETURN o {
+                RETURN o {{
                     .*,
-                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0],
+                    status: [label IN labels(o) WHERE label in [{self.statuses}]][0],
                     candidate_id: c.id,
                     vacancy_id: v.id,
                     created_by: u.id
-                } AS offer_data
+                }} AS offer_data
                 """,
                 offer_id=str(offer_id),
             )
@@ -156,7 +156,7 @@ class OfferRepository:
             full_query = f"""
             {base_query}
             {where_str}
-            WITH o, u, c, v, [label IN labels(c) WHERE label IN [{self.statuses}]][0] AS status
+            WITH o, u, c, v, [label IN labels(o) WHERE label IN [{self.statuses}]][0] AS status
             {order_by}
             WITH count(o) AS total_count, collect(o {{
                 .*,
