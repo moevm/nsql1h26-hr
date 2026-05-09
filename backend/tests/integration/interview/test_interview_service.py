@@ -436,3 +436,225 @@ async def test_filter_interviews_pagination(
     # пересечение должно быть минимальным (только один общий, если limit=2 offset=1 при трёх записях)
     assert len(first_page_ids & second_page_ids) == 1
 
+
+async def test_filter_interviews_sorting_by_result(
+    interview_service, test_candidate, tech_spec_user
+):
+    """Сортировка по result (по возрастанию)."""
+    now = datetime.now(timezone.utc)
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now,
+            result=InterviewResult.INTERVIEW_PASSED
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(hours=1),
+            result=InterviewResult.AWAIT_INTERVIEW
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(hours=2),
+            result=InterviewResult.INTERVIEW_FAILED
+        )
+    )
+
+    filters = InterviewFilter(sort_by=InterviewSort.RESULT, sort_order=SortOrder.ASC)
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 3
+    # Ожидаемый алфавитный порядок enum-значений
+    expected_order = [
+        InterviewResult.AWAIT_INTERVIEW,
+        InterviewResult.INTERVIEW_FAILED,
+        InterviewResult.INTERVIEW_PASSED,
+    ]
+    assert [item.result for item in result.items] == expected_order
+
+
+async def test_filter_interviews_sorting_by_candidate_name(
+    interview_service, candidate_repo, test_vacancy, tech_spec_user
+):
+    """Сортировка по имени кандидата (по возрастанию)."""
+    c1 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="Zoe",
+            email="zoe@example.com",
+            phone="+71234567890",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c2 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="Anna",
+            email="anna@example.com",
+            phone="+71234567891",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c1_id = UUID(c1["id"])
+    c2_id = UUID(c2["id"])
+    now = datetime.now(timezone.utc)
+
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c1_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c2_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(hours=1)
+        )
+    )
+
+    filters = InterviewFilter(sort_by=InterviewSort.CANDIDATE_NAME, sort_order=SortOrder.ASC)
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 2
+    # Anna должна идти раньше Zoe
+    assert result.items[0].candidate_id == c2_id   # Anna
+    assert result.items[1].candidate_id == c1_id   # Zoe
+
+
+async def test_filter_interviews_sorting_by_tech_spec_name(
+    interview_service, test_candidate, neo4j_driver
+):
+    """Сортировка по имени технического специалиста (по возрастанию)."""
+    tech_z = uuid4()
+    tech_a = uuid4()
+    async with neo4j_driver.session() as session:
+        await session.run(
+            """
+            CREATE (u:User:TECH_SPEC {
+                id: $id, email: $email, full_name: $full_name,
+                password_hash: $hash, role: 'TECH_SPEC'
+            })
+            """,
+            id=str(tech_z), email="z@example.com", full_name="Zoe Tech", hash="hash"
+        )
+        await session.run(
+            """
+            CREATE (u:User:TECH_SPEC {
+                id: $id, email: $email, full_name: $full_name,
+                password_hash: $hash, role: 'TECH_SPEC'
+            })
+            """,
+            id=str(tech_a), email="a@example.com", full_name="Anna Tech", hash="hash"
+        )
+
+    now = datetime.now(timezone.utc)
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_z,
+            scheduled_at=now
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_a,
+            scheduled_at=now + timedelta(hours=1)
+        )
+    )
+
+    filters = InterviewFilter(sort_by=InterviewSort.TECH_SPEC_NAME, sort_order=SortOrder.ASC)
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 2
+    assert result.items[0].tech_spec_id == tech_a   # Anna
+    assert result.items[1].tech_spec_id == tech_z   # Zoe
+
+
+async def test_filter_interviews_empty_result(
+    interview_service, test_candidate, tech_spec_user
+):
+    """Фильтр, который не даёт результатов, возвращает total=0 и пустой список."""
+    now = datetime.now(timezone.utc)
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now
+        )
+    )
+
+    filters = InterviewFilter(candidate_name="NonExistentName")
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 0
+    assert result.items == []
+
+
+async def test_filter_interviews_combined_filters(
+    interview_service, candidate_repo, test_vacancy, tech_spec_user
+):
+    """Комбинация фильтров: result и candidate_name одновременно."""
+    c1 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="John Wick",
+            email="johnwick@example.com",
+            phone="+71234567890",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c2 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="John McClane",
+            email="mcclane@example.com",
+            phone="+71234567891",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c1_id = UUID(c1["id"])
+    c2_id = UUID(c2["id"])
+    now = datetime.now(timezone.utc)
+
+    # Первое интервью: John Wick + INTERVIEW_PASSED
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c1_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now,
+            result=InterviewResult.INTERVIEW_PASSED
+        )
+    )
+    # Второе: John McClane + INTERVIEW_FAILED
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c2_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(hours=1),
+            result=InterviewResult.INTERVIEW_FAILED
+        )
+    )
+    # Третье: ещё один John Wick, но с другим результатом
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c1_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(hours=2),
+            result=InterviewResult.AWAIT_INTERVIEW
+        )
+    )
+
+    filters = InterviewFilter(
+        result=InterviewResult.INTERVIEW_PASSED,
+        candidate_name="john"
+    )
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 1
+    assert result.items[0].candidate_id == c1_id
+    assert result.items[0].result == InterviewResult.INTERVIEW_PASSED
