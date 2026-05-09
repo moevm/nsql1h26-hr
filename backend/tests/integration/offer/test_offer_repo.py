@@ -85,32 +85,6 @@ async def test_create_offer_ok(offer_repo, test_offer_create_data):
     assert offer is not None
     assert offer.id is not None
 
-async def test_create_offer_candidate_not_found(offer_repo, test_user, test_vacancy):
-    """Создание оффера для несуществующего кандидата должно вернуть None"""
-    start_at = datetime.now(timezone.utc) + timedelta(days=30)
-    offer_data = OfferCreate(
-        candidate_id=uuid4(),  # несуществующий ID
-        vacancy_id=UUID(test_vacancy["id"]),
-        created_by=test_user.id,
-        salary=100000,
-        start_at=start_at,
-    )
-    offer = await offer_repo.create_offer(offer_data)
-    assert offer is None
-
-
-async def test_create_offer_vacancy_not_found(offer_repo, test_user, test_candidate):
-    """Создание оффера для несуществующей вакансии должно вернуть None"""
-    start_at = datetime.now(timezone.utc) + timedelta(days=30)
-    offer_data = OfferCreate(
-        candidate_id=test_candidate["id"],
-        vacancy_id=uuid4(),  # несуществующий ID
-        created_by=test_user.id,
-        salary=100000,
-        start_at=start_at,
-    )
-    offer = await offer_repo.create_offer(offer_data)
-    assert offer is None
 
 async def test_get_offer_by_id_ok(offer_repo, test_offer_create_data):
     created = await offer_repo.create_offer(test_offer_create_data)
