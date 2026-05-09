@@ -1,3 +1,4 @@
+import pytest
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -271,3 +272,57 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
+
+
+
+async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
+    """Ожидаем 400, если tech_spec не найден (спецификация)."""
+    vacancy_resp = await hr_client.post(
+        "/vacancies", json={"title": "Tech Spec NotFound Vacancy", "description": "Test"}
+    )
+    assert vacancy_resp.status_code == 201
+    vacancy_id = vacancy_resp.json()["id"]
+
+    candidate_resp = await hr_client.post(
+        "/candidates",
+        json={
+            "full_name": "Test Candidate",
+            "email": "test_candidate@example.com",
+            "phone": "+71234567890",
+            "status": "TEST", 
+            "vacancy_id": vacancy_id
+        }
+    )
+    assert candidate_resp.status_code == 201
+    candidate_id = candidate_resp.json()["id"]
+
+    non_existent_tech_spec_id = str(uuid.uuid4())
+    scheduled_at_iso = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+
+    response = await hr_client.post(
+        "/interviews",
+        json={
+            "candidate_id": candidate_id,
+            "tech_spec_id": non_existent_tech_spec_id,
+            "scheduled_at": scheduled_at_iso
+        }
+    )
+    assert response.status_code == 400
+
+@pytest.mark.parametrize("missing_field", [
+    "candidate_id",
+    "tech_spec_id",
+    "scheduled_at"
+])
+async def test_create_interview_missing_required_fields(hr_client, missing_field):
+    """При отсутствии обязательного поля возвращается 422."""
+    valid_data = {
+        "candidate_id": str(uuid.uuid4()),
+        "tech_spec_id": str(uuid.uuid4()),
+        "scheduled_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    }
+    # Удаляем проверяемое поле
+    invalid_data = {k: v for k, v in valid_data.items() if k != missing_field}
+    
+    response = await hr_client.post("/interviews", json=invalid_data)
+    assert response.status_code == 422
