@@ -39,9 +39,8 @@ async def user_service(user_repo):
 
 
 @pytest.fixture
-async def offer_service(offer_repo):
-    """Сервис принимает только offer_repo"""
-    return OfferService(offer_repo)
+async def offer_service(offer_repo, candidate_repo):
+    return OfferService(offer_repo, candidate_repo)
 
 
 @pytest.fixture
