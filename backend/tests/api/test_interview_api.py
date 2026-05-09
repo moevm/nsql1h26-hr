@@ -1,22 +1,44 @@
 import pytest
 import uuid
 from datetime import datetime, timedelta, timezone
+from app.models.user import UserCreate, Role
+from app.services.user_service import UserService
+from app.repositories.user_repo import UserRepository
 
 
-async def test_create_interview_ok(hr_client, neo4j_driver):
-    tech_spec_id = uuid.uuid4()
+@pytest.fixture
+async def user_repo(neo4j_driver):
+    return UserRepository(neo4j_driver)
 
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_spec_id), email="tech_api@test.com",
-            full_name="Tech API", hash="hash"
+
+@pytest.fixture
+async def user_service(user_repo):
+    return UserService(user_repo)
+
+
+@pytest.fixture
+async def test_tech_spec(user_service):
+    user = await user_service.create_user(
+        UserCreate(
+            email=f"tech_{uuid.uuid4()}@test.com",
+            full_name="Test Tech Spec",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    return user
+
+
+async def test_create_interview_ok(hr_client, user_service):
+    tech_spec = await user_service.create_user(
+        UserCreate(
+            email="tech_api@test.com",
+            full_name="Tech API",
+            password="hash123456",
+            role=Role.TECH_SPEC
+        )
+    )
+    tech_spec_id = tech_spec.id
 
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Interview Vacancy", "description": "For interview testing"}
@@ -63,20 +85,17 @@ async def test_create_interview_ok(hr_client, neo4j_driver):
     assert data["feedback"] is None
 
 
-async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
-    """БАГ: API возвращает 200 с None вместо 400, что вызывает ошибку валидации ответа."""
-    tech_spec_id = uuid.uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_spec_id), email="tech_api2@test.com",
-            full_name="Tech API 2", hash="hash"
+async def test_create_interview_candidate_not_found(hr_client, user_service):
+    tech_spec = await user_service.create_user(
+        UserCreate(
+            email="tech_api2@test.com",
+            full_name="Tech API 2",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_spec_id = tech_spec.id
+    
     scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
     non_existent_candidate_id = str(uuid.uuid4())
 
@@ -91,19 +110,17 @@ async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
     assert response.status_code == 400
 
 
-async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
-    tech_spec_id = uuid.uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_spec_id), email="tech_api3@test.com",
-            full_name="Tech API 3", hash="hash"
+async def test_get_interview_by_id_ok(hr_client, user_service):
+    tech_spec = await user_service.create_user(
+        UserCreate(
+            email="tech_api3@test.com",
+            full_name="Tech API 3",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_spec_id = tech_spec.id
+    
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Get Interview Vacancy", "description": "Test"}
     )
@@ -146,28 +163,28 @@ async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
 
 
 async def test_get_interview_by_id_not_found(hr_client):
-    """БАГ: API возвращает 200 с None вместо 404, что вызывает ошибку валидации ответа."""
     non_existent_id = str(uuid.uuid4())
     response = await hr_client.get(f"/interviews/{non_existent_id}")
     assert response.status_code == 404
 
 
-async def test_filter_interviews_ok(hr_client, neo4j_driver):
-    """БАГ: метод filter_interviews репозитория возвращает интервью с tech_spec_id=None,
-    что приводит к ValidationError при сериализации ответа. Тест упадёт."""
-    tech_spec_1 = uuid.uuid4()
-    tech_spec_2 = uuid.uuid4()
-    async with neo4j_driver.session() as session:
-        for ts_id, email in [(tech_spec_1, "tech_f1@test.com"), (tech_spec_2, "tech_f2@test.com")]:
-            await session.run(
-                """
-                CREATE (u:User:TECH_SPEC {
-                    id: $id, email: $email, full_name: $full_name,
-                    password_hash: $hash, role: 'TECH_SPEC'
-                })
-                """,
-                id=str(ts_id), email=email, full_name="Tech Filter", hash="hash"
-            )
+async def test_filter_interviews_ok(hr_client, user_service):
+    tech_spec_1 = await user_service.create_user(
+        UserCreate(
+            email="tech_f1@test.com",
+            full_name="Tech Filter 1",
+            password="hash123456",
+            role=Role.TECH_SPEC
+        )
+    )
+    tech_spec_2 = await user_service.create_user(
+        UserCreate(
+            email="tech_f2@test.com",
+            full_name="Tech Filter 2",
+            password="hash123456",
+            role=Role.TECH_SPEC
+        )
+    )
 
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Filter Vacancy", "description": "Test"}
@@ -192,7 +209,7 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
         "/interviews",
         json={
             "candidate_id": candidate_id,
-            "tech_spec_id": str(tech_spec_1),
+            "tech_spec_id": str(tech_spec_1.id),
             "scheduled_at": (now + timedelta(days=1)).isoformat(),
             "result": "INTERVIEW_PASSED"
         }
@@ -201,7 +218,7 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
         "/interviews",
         json={
             "candidate_id": candidate_id,
-            "tech_spec_id": str(tech_spec_2),
+            "tech_spec_id": str(tech_spec_2.id),
             "scheduled_at": (now + timedelta(days=2)).isoformat(),
             "result": "INTERVIEW_FAILED"
         }
@@ -221,19 +238,17 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
     assert data["items"][0]["result"] == "INTERVIEW_PASSED"
 
 
-async def test_filter_interviews_by_date(hr_client, neo4j_driver):
-    tech_spec_id = uuid.uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(tech_spec_id), email="tech_date@test.com",
-            full_name="Tech Date", hash="hash"
+async def test_filter_interviews_by_date(hr_client, user_service):
+    tech_spec = await user_service.create_user(
+        UserCreate(
+            email="tech_date@test.com",
+            full_name="Tech Date",
+            password="hash123456",
+            role=Role.TECH_SPEC
         )
+    )
+    tech_spec_id = tech_spec.id
+    
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
     )
@@ -253,8 +268,8 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
     candidate_id = candidate_resp.json()["id"]
 
     now = datetime.now(timezone.utc)
-    date_from = (now + timedelta(days=1)).timestamp()
-    date_to = (now + timedelta(days=3)).timestamp()
+    date_from = int((now + timedelta(days=1)).timestamp())
+    date_to = int((now + timedelta(days=3)).timestamp())
 
     await hr_client.post(
         "/interviews",
@@ -274,9 +289,8 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
     assert data["total"] == 1
 
 
-
-async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
-    """Ожидаем 400, если tech_spec не найден (спецификация)."""
+async def test_create_interview_tech_spec_not_found(hr_client, user_service):
+    """Ожидаем 400, если tech_spec не найден """
     
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
@@ -308,6 +322,7 @@ async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
         }
     )
     assert response.status_code == 400
+
 
 @pytest.mark.parametrize("missing_field", [
     "candidate_id",
