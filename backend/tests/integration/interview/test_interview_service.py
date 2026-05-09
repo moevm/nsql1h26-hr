@@ -738,3 +738,11 @@ async def test_patch_interview_to_passed(
     assert patched.result == patch.result
     assert patched.feedback == patch.feedback
     assert candidate.status == CandidateStatus.OFFER
+async def test_filter_by_date_range(interview_service):
+    result = await interview_service.filter_interviews(
+        InterviewFilter(
+            scheduled_at_from=1000,
+            scheduled_at_to=2000
+        )
+    )
+    assert all(1000 <= i.scheduled_at <= 2000 for i in result.items)
