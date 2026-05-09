@@ -1060,7 +1060,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
-      description: Роль MANAGER
+      description: Роль MANAGER. При  статусе оффера REJECTED_MNG  или REJECTED_CNF статус кандидата → REJECTED. При APPROVED_CND статус кандидата → HIRED, вакансия → CLOSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
