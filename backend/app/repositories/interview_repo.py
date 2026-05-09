@@ -4,7 +4,8 @@ from app.models.interview import (
     InterviewCreate,
     InterviewResponse,
     InterviewFilter,
-    InterviewFilterResponse
+    InterviewFilterResponse,
+    InterviewPatch,
 )
 
 
@@ -49,6 +50,27 @@ class InterviewRepository:
                     else "AWAIT_INTERVIEW"
                 ),
             )
+            record = await result.single()
+            if not record:
+                return None
+            return InterviewResponse(**record["interview_data"])
+
+    async def patch_interview(
+        self, interview_id: UUID, patch: dict
+    ) -> InterviewResponse:
+        async with self.driver.session() as session:
+            query = """
+            MATCH (i:Interview {id: $id})
+            MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
+            MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
+            SET i += $props
+            RETURN i {
+                .*,
+                candidate_id: c.id,
+                tech_spec_id: u.id
+            } AS interview_data
+            """
+            result = await session.run(query, id=str(interview_id), props=patch)
             record = await result.single()
             if not record:
                 return None

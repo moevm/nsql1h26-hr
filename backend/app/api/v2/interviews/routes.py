@@ -13,6 +13,7 @@ from app.models.interview import (
     InterviewResponse,
     InterviewFilter,
     InterviewFilterResponse,
+    InterviewPatch
 )
 from app.core.security import require_role
 
@@ -51,3 +52,16 @@ async def filter_interviews(
     interview_service: InterviewService = Depends(get_interview_service),
 ):
     return await interview_service.filter_interviews(filters)
+
+
+@router.patch(
+    "/{interview_id}", response_model=InterviewResponse, status_code=status.HTTP_200_OK
+)
+async def patch_interview(
+    interview_id: UUID,
+    patch_data: InterviewPatch,
+    interview_service: InterviewService = Depends(get_interview_service),
+    _: dict = Depends(require_role("TECH_SPEC")),
+):
+    interview = await interview_service.patch_interview(interview_id, patch_data)
+    return interview

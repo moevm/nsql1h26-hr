@@ -8,12 +8,20 @@ from app.models.interview import (
     InterviewResponse,
     InterviewFilter,
     InterviewFilterResponse,
+    InterviewPatch,
+    InterviewResult,
 )
+from app.models.candidate import CandidateStatus
 from app.core.exceptions import AppError
 
 
 class InterviewService:
-    def __init__(self, interview_repo: InterviewRepository, candidate_repo: CandidateRepository, user_repo: UserRepository):
+    def __init__(
+        self,
+        interview_repo: InterviewRepository,
+        candidate_repo: CandidateRepository,
+        user_repo: UserRepository,
+    ):
         self.interview_repo = interview_repo
         self.candidate_repo = candidate_repo
         self.user_repo = user_repo
@@ -21,23 +29,56 @@ class InterviewService:
     async def create_interview(
         self, interview_data: InterviewCreate
     ) -> InterviewResponse:
-        candidate = await self.candidate_repo.get_candidate_by_id(interview_data.candidate_id)
+        candidate = await self.candidate_repo.get_candidate_by_id(
+            interview_data.candidate_id
+        )
         if not candidate:
-            raise AppError("Candidate with given ID not found", status.HTTP_400_BAD_REQUEST)
+            raise AppError(
+                "Candidate with given ID not found", status.HTTP_400_BAD_REQUEST
+            )
         tech_spec = await self.user_repo.get_user_by_id(interview_data.tech_spec_id)
         if not tech_spec:
-            raise AppError("Tech spec with given ID not found", status.HTTP_400_BAD_REQUEST)
+            raise AppError(
+                "Tech spec with given ID not found", status.HTTP_400_BAD_REQUEST
+            )
         created = await self.interview_repo.create_interview(interview_data)
         return created
 
     async def get_interview_by_id(self, interview_id: UUID) -> InterviewResponse:
         interview = await self.interview_repo.get_interview_by_id(interview_id)
         if interview is None:
-            raise AppError("Interview with given ID not found", status.HTTP_404_NOT_FOUND)
+            raise AppError(
+                "Interview with given ID not found", status.HTTP_404_NOT_FOUND
+            )
         return interview
 
     async def filter_interviews(
         self, filters: InterviewFilter
     ) -> InterviewFilterResponse:
+        if (
+            filters.scheduled_at_from
+            and filters.scheduled_at_to
+            and filters.scheduled_at_from > filters.scheduled_at_to
+        ):
+            raise AppError(
+                "scheduled_at_from must be <= scheduled_at_to",
+                status.HTTP_400_BAD_REQUEST,
+            )
         result = await self.interview_repo.filter_interviews(filters)
         return result
+
+    async def patch_interview(
+        self, interview_id: UUID, patch: InterviewPatch
+    ) -> InterviewResponse:
+        interview = await self.interview_repo.get_interview_by_id(interview_id)
+        if not interview:
+            raise AppError("interview not found", status.HTTP_404_NOT_FOUND)
+        patch_raw = patch.model_dump()
+        patched_interview = await self.interview_repo.patch_interview(
+            interview_id, patch_raw
+        )
+        if patch.result == InterviewResult.INTERVIEW_PASSED:
+            await self.candidate_repo.patch_candidate(
+                patched_interview.candidate_id, {"status": CandidateStatus.OFFER}
+            )
+        return patched_interview

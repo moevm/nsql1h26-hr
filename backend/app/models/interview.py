@@ -63,3 +63,8 @@ class InterviewFilterResponse(BaseModel):
     items: list[InterviewResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InterviewPatch(BaseModel):
+    feedback: str = Field(min_length=1, max_length=2000)
+    result: InterviewResult
