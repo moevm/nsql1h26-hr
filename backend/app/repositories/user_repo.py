@@ -44,10 +44,10 @@ class UserRepository:
             )
         return None
 
-    async def create_user(self, user_data: UserCreate) -> UserDB:
+    async def create_user(self, user_data: dict) -> UserDB:
         user_id = str(uuid4())
         query = f"""
-        CREATE (u:User:{user_data.role} {{
+        CREATE (u:User:{user_data["role"]} {{
             id: $id,
             email: $email,
             full_name: $full_name,
@@ -59,10 +59,10 @@ class UserRepository:
         result = await self.driver.execute_query(
             query,
             id=user_id,
-            email=user_data.email,
-            full_name=user_data.full_name,
-            password_hash=user_data.password_hash,
-            role=user_data.role,
+            email=user_data["email"],
+            full_name=user_data["full_name"],
+            password_hash=user_data["password_hash"],
+            role=user_data["role"],
         )
         record = result.records[0]
         return UserDB(
