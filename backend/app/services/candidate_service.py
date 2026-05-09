@@ -7,6 +7,7 @@ from app.models.candidate import (
     CandidateFilter,
     CandidateFilterResponse,
     CandidateStatus,
+    CandidatePatch,
 )
 from app.core.exceptions import AppError
 from fastapi import status
@@ -66,3 +67,27 @@ class CandidateService:
     ) -> CandidateFilterResponse:
         candidates = await self.candidate_repo.filter_candidates(filters)
         return CandidateFilterResponse(**candidates)
+
+    async def patch_candidate(
+        self, candidate_id: UUID, candidate_patch: CandidatePatch
+    ) -> CandidateResponse:
+        candidate = await self.candidate_repo.get_candidate_by_id(candidate_id)
+        if candidate is None:
+            raise AppError("Candidate not found", status.HTTP_404_NOT_FOUND)
+        if candidate_patch.vacancy_id:
+            vacancy = await self.vacancy_repo.get_vacancy_by_id(
+                candidate_patch.vacancy_id
+            )
+            if not vacancy:
+                raise AppError("Vacancy not found", status.HTTP_404_NOT_FOUND)
+        if candidate_patch.test_task_id:
+            test_task = await self.test_task_repo.get_test_task_by_id(
+                candidate_patch.test_task_id
+            )
+            if not test_task:
+                raise AppError("Test task not found", status.HTTP_404_NOT_FOUND)
+        candidate_data = candidate_patch.model_dump(exclude_unset=True)
+        candidate = await self.candidate_repo.patch_candidate(
+            candidate_id, candidate_data
+        )
+        return CandidateResponse(**candidate)
