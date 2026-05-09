@@ -14,12 +14,15 @@ async def test_create_interview_ok(hr_client, neo4j_driver):
                 password_hash: $hash, role: 'TECH_SPEC'
             })
             """,
-            id=str(tech_spec_id), email="tech_api@test.com",
-            full_name="Tech API", hash="hash"
+            id=str(tech_spec_id),
+            email="tech_api@test.com",
+            full_name="Tech API",
+            hash="hash",
         )
 
     vacancy_resp = await hr_client.post(
-        "/vacancies", json={"title": "Interview Vacancy", "description": "For interview testing"}
+        "/vacancies",
+        json={"title": "Interview Vacancy", "description": "For interview testing"},
     )
     assert vacancy_resp.status_code == 201
     vacancy_id = vacancy_resp.json()["id"]
@@ -32,8 +35,8 @@ async def test_create_interview_ok(hr_client, neo4j_driver):
             "phone": "+71234567890",
             "status": "NEW",
             "vacancy_id": vacancy_id,
-            "resume_url": "https://example.com/resume.pdf"
-        }
+            "resume_url": "https://example.com/resume.pdf",
+        },
     )
     assert candidate_resp.status_code == 201
     candidate_id = candidate_resp.json()["id"]
@@ -49,8 +52,8 @@ async def test_create_interview_ok(hr_client, neo4j_driver):
             "tech_spec_id": str(tech_spec_id),
             "scheduled_at": scheduled_at_iso,
             "zoom_url": "https://zoom.us/test",
-            "result": "AWAIT_INTERVIEW"
-        }
+            "result": "AWAIT_INTERVIEW",
+        },
     )
     assert response.status_code == 201
     data = response.json()
@@ -74,8 +77,10 @@ async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
                 password_hash: $hash, role: 'TECH_SPEC'
             })
             """,
-            id=str(tech_spec_id), email="tech_api2@test.com",
-            full_name="Tech API 2", hash="hash"
+            id=str(tech_spec_id),
+            email="tech_api2@test.com",
+            full_name="Tech API 2",
+            hash="hash",
         )
     scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
     non_existent_candidate_id = str(uuid.uuid4())
@@ -85,8 +90,8 @@ async def test_create_interview_candidate_not_found(hr_client, neo4j_driver):
         json={
             "candidate_id": non_existent_candidate_id,
             "tech_spec_id": str(tech_spec_id),
-            "scheduled_at": scheduled_at
-        }
+            "scheduled_at": scheduled_at,
+        },
     )
     assert response.status_code == 400
 
@@ -101,8 +106,10 @@ async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
                 password_hash: $hash, role: 'TECH_SPEC'
             })
             """,
-            id=str(tech_spec_id), email="tech_api3@test.com",
-            full_name="Tech API 3", hash="hash"
+            id=str(tech_spec_id),
+            email="tech_api3@test.com",
+            full_name="Tech API 3",
+            hash="hash",
         )
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Get Interview Vacancy", "description": "Test"}
@@ -117,8 +124,8 @@ async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
             "email": "get@example.com",
             "phone": "+71234567890",
             "status": "NEW",
-            "vacancy_id": vacancy_id
-        }
+            "vacancy_id": vacancy_id,
+        },
     )
     assert candidate_resp.status_code == 201
     candidate_id = candidate_resp.json()["id"]
@@ -132,8 +139,8 @@ async def test_get_interview_by_id_ok(hr_client, neo4j_driver):
             "tech_spec_id": str(tech_spec_id),
             "scheduled_at": scheduled_at_iso,
             "zoom_url": "https://zoom.us/get",
-            "result": "AWAIT_INTERVIEW"
-        }
+            "result": "AWAIT_INTERVIEW",
+        },
     )
     assert create_resp.status_code == 201
     interview = create_resp.json()
@@ -158,7 +165,10 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
     tech_spec_1 = uuid.uuid4()
     tech_spec_2 = uuid.uuid4()
     async with neo4j_driver.session() as session:
-        for ts_id, email in [(tech_spec_1, "tech_f1@test.com"), (tech_spec_2, "tech_f2@test.com")]:
+        for ts_id, email in [
+            (tech_spec_1, "tech_f1@test.com"),
+            (tech_spec_2, "tech_f2@test.com"),
+        ]:
             await session.run(
                 """
                 CREATE (u:User:TECH_SPEC {
@@ -166,7 +176,10 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
                     password_hash: $hash, role: 'TECH_SPEC'
                 })
                 """,
-                id=str(ts_id), email=email, full_name="Tech Filter", hash="hash"
+                id=str(ts_id),
+                email=email,
+                full_name="Tech Filter",
+                hash="hash",
             )
 
     vacancy_resp = await hr_client.post(
@@ -181,8 +194,8 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
             "email": "filter@ex.com",
             "phone": "+71234567890",
             "status": "NEW",
-            "vacancy_id": vacancy_id
-        }
+            "vacancy_id": vacancy_id,
+        },
     )
     assert candidate_resp.status_code == 201
     candidate_id = candidate_resp.json()["id"]
@@ -194,8 +207,8 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
             "candidate_id": candidate_id,
             "tech_spec_id": str(tech_spec_1),
             "scheduled_at": (now + timedelta(days=1)).isoformat(),
-            "result": "INTERVIEW_PASSED"
-        }
+            "result": "INTERVIEW_PASSED",
+        },
     )
     await hr_client.post(
         "/interviews",
@@ -203,8 +216,8 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
             "candidate_id": candidate_id,
             "tech_spec_id": str(tech_spec_2),
             "scheduled_at": (now + timedelta(days=2)).isoformat(),
-            "result": "INTERVIEW_FAILED"
-        }
+            "result": "INTERVIEW_FAILED",
+        },
     )
 
     # Фильтр без параметров
@@ -213,7 +226,7 @@ async def test_filter_interviews_ok(hr_client, neo4j_driver):
     data = response.json()
     assert data["total"] == 2
 
-    # Фильтр по результату — упадёт 
+    # Фильтр по результату — упадёт
     response = await hr_client.get("/interviews", params={"result": "INTERVIEW_PASSED"})
     assert response.status_code == 200
     data = response.json()
@@ -231,8 +244,10 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
                 password_hash: $hash, role: 'TECH_SPEC'
             })
             """,
-            id=str(tech_spec_id), email="tech_date@test.com",
-            full_name="Tech Date", hash="hash"
+            id=str(tech_spec_id),
+            email="tech_date@test.com",
+            full_name="Tech Date",
+            hash="hash",
         )
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
@@ -246,8 +261,8 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
             "email": "date@ex.com",
             "phone": "+71234567890",
             "status": "NEW",
-            "vacancy_id": vacancy_id
-        }
+            "vacancy_id": vacancy_id,
+        },
     )
     assert candidate_resp.status_code == 201
     candidate_id = candidate_resp.json()["id"]
@@ -261,23 +276,22 @@ async def test_filter_interviews_by_date(hr_client, neo4j_driver):
         json={
             "candidate_id": candidate_id,
             "tech_spec_id": str(tech_spec_id),
-            "scheduled_at": (now + timedelta(days=2)).isoformat()
-        }
+            "scheduled_at": (now + timedelta(days=2)).isoformat(),
+        },
     )
 
     response = await hr_client.get(
         "/interviews",
-        params={"scheduled_at_from": date_from, "scheduled_at_to": date_to}
+        params={"scheduled_at_from": date_from, "scheduled_at_to": date_to},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
 
 
-
 async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
     """Ожидаем 400, если tech_spec не найден (спецификация)."""
-    
+
     vacancy_resp = await hr_client.post(
         "/vacancies", json={"title": "Date Filter Vacancy", "description": "Test"}
     )
@@ -290,8 +304,8 @@ async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
             "email": "date@ex.com",
             "phone": "+71234567890",
             "status": "NEW",
-            "vacancy_id": vacancy_id
-        }
+            "vacancy_id": vacancy_id,
+        },
     )
     assert candidate_resp.status_code == 201
     candidate_id = candidate_resp.json()["id"]
@@ -304,26 +318,25 @@ async def test_create_interview_tech_spec_not_found(hr_client, neo4j_driver):
         json={
             "candidate_id": candidate_id,
             "tech_spec_id": non_existent_tech_spec_id,
-            "scheduled_at": scheduled_at_iso
-        }
+            "scheduled_at": scheduled_at_iso,
+        },
     )
     assert response.status_code == 400
 
-@pytest.mark.parametrize("missing_field", [
-    "candidate_id",
-    "tech_spec_id",
-    "scheduled_at"
-])
+
+@pytest.mark.parametrize(
+    "missing_field", ["candidate_id", "tech_spec_id", "scheduled_at"]
+)
 async def test_create_interview_missing_required_fields(hr_client, missing_field):
     """При отсутствии обязательного поля возвращается 422."""
     valid_data = {
         "candidate_id": str(uuid.uuid4()),
         "tech_spec_id": str(uuid.uuid4()),
-        "scheduled_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+        "scheduled_at": (datetime.now(timezone.utc) + timedelta(days=1)).isoformat(),
     }
     # Удаляем проверяемое поле
     invalid_data = {k: v for k, v in valid_data.items() if k != missing_field}
-    
+
     response = await hr_client.post("/interviews", json=invalid_data)
     assert response.status_code == 422
 
@@ -331,11 +344,7 @@ async def test_create_interview_missing_required_fields(hr_client, missing_field
 async def test_filter_interviews_api_invalid_date_range_returns_400(hr_client):
     """API должен возвращать 400 при некорректном диапазоне дат"""
     response = await hr_client.get(
-        "/interviews",
-        params={
-            "scheduled_at_from": 2000,
-            "scheduled_at_to": 1000
-        }
+        "/interviews", params={"scheduled_at_from": 2000, "scheduled_at_to": 1000}
     )
     assert response.status_code == 400
     assert "scheduled_at_from must be <= scheduled_at_to" in response.text
