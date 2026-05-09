@@ -344,3 +344,126 @@ async def test_sorting_and_pagination(candidate_repo, vacancy_repo, test_task_re
     assert len(result["items"]) == 2
     assert result["items"][0]["full_name"] == "Boris"
     assert result["items"][1]["full_name"] == "Anna"
+
+async def test_patch_candidate_simple(candidate_repo, test_task_repo, vacancy_repo):
+    vacancy_id = (
+        await vacancy_repo.create_vacancy(
+            VacancyCreate(title="Title1", description="desc")
+        )
+    )["id"]
+    test_task_id = (
+        await test_task_repo.create_test_task(
+            TestTaskCreate(
+                title="Test title 1",
+                test_task_url="https://google.com",
+                vacancy_id=vacancy_id,
+            )
+        )
+    )["id"]
+
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79527416565",
+        status="NEW",
+        resume_url="https://google.com/",
+        vacancy_id=vacancy_id,
+        test_task_id=test_task_id,
+    )
+    candidate_id = (await candidate_repo.create_candidate(candidate))["id"]
+    patch = {
+        "full_name":"Candidate A",
+        "email":"candidate@gmail.com"
+    }
+    patched_candidate = await candidate_repo.patch_candidate(candidate_id, patch)
+    assert patched_candidate["id"] == candidate_id
+    assert patched_candidate["full_name"] == patch["full_name"]
+    assert patched_candidate["email"] == patch["email"]
+    assert patched_candidate["full_name"] == patch["full_name"]
+    assert patched_candidate["phone"] == candidate.phone
+    assert patched_candidate["status"] == candidate.status
+    assert patched_candidate["resume_url"] == str(candidate.resume_url)
+    assert patched_candidate["vacancy_id"] == str(candidate.vacancy_id)
+    assert patched_candidate["test_task_id"] == str(candidate.test_task_id)
+
+
+async def test_patch_candidate_status(candidate_repo, test_task_repo, vacancy_repo):
+    vacancy_id = (
+        await vacancy_repo.create_vacancy(
+            VacancyCreate(title="Title1", description="desc")
+        )
+    )["id"]
+    test_task_id = (
+        await test_task_repo.create_test_task(
+            TestTaskCreate(
+                title="Test title 1",
+                test_task_url="https://google.com",
+                vacancy_id=vacancy_id,
+            )
+        )
+    )["id"]
+
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79527416565",
+        status="NEW",
+        resume_url="https://google.com/",
+        vacancy_id=vacancy_id,
+        test_task_id=test_task_id,
+    )
+    candidate_id = (await candidate_repo.create_candidate(candidate))["id"]
+    patch = {
+        "full_name":"Candidate A",
+        "email":"candidate@gmail.com",
+        "status": "TEST"
+    }
+    patched_candidate = await candidate_repo.patch_candidate(candidate_id, patch)
+    assert patched_candidate["id"] == candidate_id
+    assert patched_candidate["full_name"] == patch["full_name"]
+    assert patched_candidate["email"] == patch["email"]
+    assert patched_candidate["full_name"] == patch["full_name"]
+    assert patched_candidate["phone"] == candidate.phone
+    assert patched_candidate["status"] == "TEST"
+    assert patched_candidate["resume_url"] == str(candidate.resume_url)
+    assert patched_candidate["vacancy_id"] == str(candidate.vacancy_id)
+    assert patched_candidate["test_task_id"] == str(candidate.test_task_id)
+
+
+async def test_patch_candidate_ids(candidate_repo, test_task_repo, vacancy_repo):
+    vacancy_id = (
+        await vacancy_repo.create_vacancy(
+            VacancyCreate(title="Title1", description="desc")
+        )
+    )["id"]
+    test_task_id = (
+        await test_task_repo.create_test_task(
+            TestTaskCreate(
+                title="Test title 1",
+                test_task_url="https://google.com",
+                vacancy_id=vacancy_id,
+            )
+        )
+    )["id"]
+
+    candidate = CandidateCreate(
+        full_name="Candidate A",
+        email="candidate@gmail.com",
+        phone="+79527416565",
+        status="NEW",
+        resume_url="https://google.com/"
+    )
+    candidate_id = (await candidate_repo.create_candidate(candidate))["id"]
+    patch = {
+        "vacancy_id": str(vacancy_id),
+        "test_task_id": str(test_task_id)
+    }
+    patched_candidate = await candidate_repo.patch_candidate(candidate_id, patch)
+    assert patched_candidate["id"] == candidate_id
+    assert patched_candidate["full_name"] == candidate.full_name
+    assert patched_candidate["email"] == candidate.email
+    assert patched_candidate["phone"] == candidate.phone
+    assert patched_candidate["status"] == candidate.status
+    assert patched_candidate["resume_url"] == str(candidate.resume_url)
+    assert patched_candidate["vacancy_id"] == str(vacancy_id)
+    assert patched_candidate["test_task_id"] == str(test_task_id)
