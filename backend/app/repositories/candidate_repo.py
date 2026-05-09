@@ -238,7 +238,7 @@ class CandidateRepository:
             sort_mapping = {
                 CandidateSort.FULL_NAME: "c.full_name",
                 CandidateSort.EMAIL: "c.email",
-                CandidateSort.STATUS: "c.status",
+                CandidateSort.STATUS: "status",
                 CandidateSort.CREATED_AT: "c.created_at",
             }
             sort_field = sort_mapping.get(filters.sort_by, "c.created_at")
@@ -249,7 +249,7 @@ class CandidateRepository:
                 {where_str}
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                WITH c, v.id as vacancy_id, t.id as test_task_id
+                WITH c, v.id as vacancy_id, t.id as test_task_id, [label IN labels(c) WHERE label IN [{self.statuses}]][0] AS status
                 ORDER BY {order_by_clause}
                 WITH count(c) AS total_count, collect(c {{
                     .*,
