@@ -4,7 +4,7 @@ from app.repositories.test_task_repo import TestTaskRepository
 from app.repositories.vacancy_repo import VacancyRepository
 from app.models.vacancy import VacancyCreate
 from app.models.test_task import TestTaskCreate
-from app.models.candidate import CandidateCreate, CandidateFilter, CandidateSort
+from app.models.candidate import CandidateCreate, CandidateFilter, CandidateSort, CandidateStatus
 from app.models.helpers import SortOrder
 
 
@@ -386,6 +386,54 @@ async def test_sorting_and_pagination(candidate_repo, vacancy_repo, test_task_re
     assert len(result["items"]) == 2
     assert result["items"][0]["full_name"] == "Boris"
     assert result["items"][1]["full_name"] == "Anna"
+
+
+async def test_sorting_by_status(candidate_repo, vacancy_repo, test_task_repo):
+    vacancy = await vacancy_repo.create_vacancy(
+        VacancyCreate(title="V", description="D")
+    )
+    vacancy_id = vacancy["id"]
+    test_task = await test_task_repo.create_test_task(
+        TestTaskCreate(
+            title="Test", test_task_url="http://test.com", vacancy_id=vacancy_id
+        )
+    )
+    test_task_id = test_task["id"]
+
+    candidates = [{"status": "TEST", "name": "Boris"},
+                  {"status": "OFFER", "name": "Anna"},
+                  {"status": "NEW", "name": "Clara"}]
+    candidate_id=""
+    for cand in candidates:
+        candidate = CandidateCreate(
+            full_name=cand["name"],
+            email=f"{cand["name"].lower()}@ex.com",
+            phone="+79638527474",
+            status=cand["status"],
+            resume_url="http://r.com",
+            vacancy_id=vacancy_id,
+            test_task_id=test_task_id,
+        )
+        await candidate_repo.create_candidate(candidate)
+    filters = CandidateFilter(
+        sort_by=CandidateSort.STATUS, sort_order=SortOrder.ASC, limit=3, offset=0
+    )
+    result = await candidate_repo.filter_candidates(filters)
+    assert result["total"] == 3
+    assert len(result["items"]) == 3
+    assert result["items"][0]["status"] == "NEW"
+    assert result["items"][1]["status"] == "OFFER"
+    assert result["items"][2]["status"] == "TEST"
+
+    filters = CandidateFilter(
+        sort_by=CandidateSort.STATUS, sort_order=SortOrder.DESC, limit=3, offset=0
+    )
+    result = await candidate_repo.filter_candidates(filters)
+    assert result["total"] == 3
+    assert len(result["items"]) == 3
+    assert result["items"][2]["status"] == "NEW"
+    assert result["items"][1]["status"] == "OFFER"
+    assert result["items"][0]["status"] == "TEST"
 
 
 async def test_patch_candidate_simple(candidate_repo, test_task_repo, vacancy_repo):
