@@ -9,7 +9,8 @@ from app.models.helpers import SortOrder
 class CandidateStatus(StrEnum):
     NEW = "NEW"
     TEST = "TEST"
-    INTERVIEW = "INTERVIEW"
+    AWAIT_INTERVIEW = "AWAIT_INTERVIEW"
+    INTERVIEW_PASSED = "INTERVIEW_PASSED"
     OFFER = "OFFER"
     REJECTED = "REJECTED"
     HIRED = "HIRED"
