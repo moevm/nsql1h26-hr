@@ -65,6 +65,16 @@ class CandidateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CandidatePatch(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=150)
+    email: EmailStr | None = None
+    phone: str | None = None
+    resume_url: HttpUrl | None = None
+    status: CandidateStatus | None = None
+    vacancy_id: UUID | None = None
+    test_task_id: UUID | None = None
+
+
 class CandidateFilter(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
     email: EmailStr | None = None

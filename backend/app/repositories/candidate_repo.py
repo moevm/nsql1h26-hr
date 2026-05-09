@@ -1,6 +1,6 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.candidate import CandidateCreate, CandidateSort, CandidateFilter
+from app.models.candidate import CandidateStatus, CandidateCreate, CandidateSort, CandidateFilter
 
 
 class CandidateRepository:
@@ -87,6 +87,77 @@ class CandidateRepository:
                 } AS candidate_data
                 """,
                 candidate_id=str(candidate_id),
+            )
+            record = await result.single()
+            if not record:
+                return None
+            data = record["candidate_data"]
+            return {k: v for k, v in data.items() if v is not None}
+
+    async def patch_candidate(self, candidate_id: UUID, candidate_data: dict) -> dict:
+        async with self.driver.session() as session:
+            new_status = candidate_data.pop("status", None)
+            vacancy_id = candidate_data.pop("vacancy_id", None)
+            test_task_id = candidate_data.pop("test_task_id", None)
+
+            tx = await session.begin_transaction()
+            try:
+                if candidate_data:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id}) SET c += $props",
+                        id=str(candidate_id), props=candidate_data
+                    )
+                if new_status:
+                    remove_labels = " REMOVE " + ", ".join(f"c:{s}" for s in CandidateStatus)
+                    set_label = f" SET c:{new_status}"
+                    await tx.run(
+                        f"MATCH (c:Candidate {{id: $id}}){remove_labels}{set_label}",
+                        id=str(candidate_id)
+                    )
+
+                if vacancy_id is not None:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id})-[r:APPLIES]->() DELETE r",
+                        id=str(candidate_id)
+                    )
+                    if vacancy_id:
+                        await tx.run(
+                            "MATCH (c:Candidate {id: $id}), (v:Vacancy {id: $vid}) "
+                            "CREATE (c)-[:APPLIES]->(v)",
+                            id=str(candidate_id), vid=str(vacancy_id)
+                        )
+
+                if test_task_id is not None:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id})-[r:COMPLETES]->() DELETE r",
+                        id=str(candidate_id)
+                    )
+                    if test_task_id:
+                        await tx.run(
+                            "MATCH (c:Candidate {id: $id}), (t:TestTask {id: $tid}) "
+                            "CREATE (c)-[:COMPLETES]->(t)",
+                            id=str(candidate_id), tid=str(test_task_id)
+                        )
+
+                await tx.commit()
+            except Exception:
+                await tx.rollback()
+                raise
+
+            statuses = ", ".join(f"'{c}'" for c in CandidateStatus)
+            result = await session.run(
+                f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {{
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label IN [{statuses}]][0]
+                }} AS candidate_data
+                """,
+                candidate_id=str(candidate_id)
             )
             record = await result.single()
             if not record:
