@@ -238,3 +238,201 @@ async def test_filter_interviews_with_sorting(interview_service, test_candidate,
     result = await interview_service.filter_interviews(filters)
     assert result.total == 2
     assert result.items[0].scheduled_at < result.items[1].scheduled_at
+
+
+async def test_filter_interviews_by_candidate_name(
+    interview_service, candidate_repo, test_vacancy, tech_spec_user
+):
+    """Фильтр по подстроке в имени кандидата."""
+    c1 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="John Smith",
+            email="john@example.com",
+            phone="+71234567890",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c2 = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="Jane Doe",
+            email="jane@example.com",
+            phone="+71234567891",
+            status="NEW",
+            vacancy_id=test_vacancy["id"]
+        )
+    )
+    c1_id = UUID(c1["id"])
+    c2_id = UUID(c2["id"])
+    now = datetime.now(timezone.utc)
+
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c1_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(days=1)
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=c2_id,
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(days=2)
+        )
+    )
+
+    filters = InterviewFilter(candidate_name="john")
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 1
+    assert result.items[0].candidate_id == c1_id
+
+
+async def test_filter_interviews_by_tech_spec_name(
+    interview_service, test_candidate, neo4j_driver
+):
+    """Фильтр по подстроке в имени технического специалиста."""
+    tech_a = uuid4()
+    tech_b = uuid4()
+    async with neo4j_driver.session() as session:
+        await session.run(
+            """
+            CREATE (u:User:TECH_SPEC {
+                id: $id, email: $email, full_name: $full_name,
+                password_hash: $hash, role: 'TECH_SPEC'
+            })
+            """,
+            id=str(tech_a), email="alpha@example.com", full_name="Tech Alpha", hash="hash"
+        )
+        await session.run(
+            """
+            CREATE (u:User:TECH_SPEC {
+                id: $id, email: $email, full_name: $full_name,
+                password_hash: $hash, role: 'TECH_SPEC'
+            })
+            """,
+            id=str(tech_b), email="beta@example.com", full_name="Tech Beta", hash="hash"
+        )
+
+    now = datetime.now(timezone.utc)
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_a,
+            scheduled_at=now + timedelta(days=1)
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_b,
+            scheduled_at=now + timedelta(days=2)
+        )
+    )
+
+    filters = InterviewFilter(tech_spec_name="alpha")
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 1
+    assert result.items[0].tech_spec_id == tech_a
+
+
+async def test_filter_interviews_by_feedback_contains(
+    interview_service, test_candidate, tech_spec_user
+):
+    """Фильтр по содержимому фидбека."""
+    now = datetime.now(timezone.utc)
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(days=1),
+            feedback="Great candidate, very strong skills"
+        )
+    )
+    # интервью без фидбека
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=now + timedelta(days=2)
+        )
+    )
+
+    filters = InterviewFilter(feedback_contains="very strong")
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 1
+    assert "very strong" in result.items[0].feedback.lower()
+
+
+async def test_filter_interviews_by_scheduled_at_range(
+    interview_service, test_candidate, tech_spec_user
+):
+    """Фильтр по диапазону дат через Unix timestamp (scheduled_at_from / scheduled_at_to)."""
+    now = datetime.now(timezone.utc)
+    t1 = now + timedelta(days=1)
+    t2 = now + timedelta(days=2)
+    t3 = now + timedelta(days=3)
+
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=t1
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=t2
+        )
+    )
+    await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=test_candidate["id"],
+            tech_spec_id=tech_spec_user,
+            scheduled_at=t3
+        )
+    )
+
+    # Диапазон от (t1 + 12 часов) до (t3 - 12 часов) должен захватить только t2
+    from_ts = int((t1 + timedelta(hours=12)).timestamp())
+    to_ts = int((t3 - timedelta(hours=12)).timestamp())
+
+    filters = InterviewFilter(scheduled_at_from=from_ts, scheduled_at_to=to_ts)
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 1
+    assert result.items[0].scheduled_at == t2
+
+
+async def test_filter_interviews_pagination(
+    interview_service, test_candidate, tech_spec_user
+):
+    """Пагинация через limit и offset."""
+    now = datetime.now(timezone.utc)
+    # Создаём 3 интервью для одного кандидата
+    for i in range(3):
+        await interview_service.create_interview(
+            InterviewCreate(
+                candidate_id=test_candidate["id"],
+                tech_spec_id=tech_spec_user,
+                scheduled_at=now + timedelta(days=i + 1)
+            )
+        )
+
+    # limit=2, offset=0 -> должно вернуться 2 элемента, total=3
+    filters = InterviewFilter(limit=2, offset=0)
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 3
+    assert len(result.items) == 2
+
+    # offset=1 -> всё ещё 3 всего, но два других элемента
+    filters.offset = 1
+    result = await interview_service.filter_interviews(filters)
+    assert result.total == 3
+    assert len(result.items) == 2
+    # убедимся, что первый элемент из второго запроса не совпадает с первым из первого запроса
+    first_page_ids = {i.id for i in (await interview_service.filter_interviews(InterviewFilter(limit=2, offset=0))).items}
+    second_page_ids = {i.id for i in result.items}
+    # пересечение должно быть минимальным (только один общий, если limit=2 offset=1 при трёх записях)
+    assert len(first_page_ids & second_page_ids) == 1
+
