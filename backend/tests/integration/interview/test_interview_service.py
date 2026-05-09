@@ -1,5 +1,6 @@
 import pytest
 from uuid import uuid4, UUID
+from fastapi import status
 from datetime import datetime, timedelta, timezone
 from app.models.interview import InterviewCreate, InterviewResult, InterviewFilter, InterviewSort
 from app.models.helpers import SortOrder
@@ -9,7 +10,8 @@ from app.services.interview_service import InterviewService
 from app.repositories.interview_repo import InterviewRepository
 from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.vacancy_repo import VacancyRepository
-
+from app.repositories.user_repo import UserRepository
+from app.core.exceptions import AppError
 
 @pytest.fixture
 async def vacancy_repo(neo4j_driver):
@@ -22,13 +24,18 @@ async def candidate_repo(neo4j_driver):
 
 
 @pytest.fixture
+async def user_repo(neo4j_driver):
+    return UserRepository(neo4j_driver)
+
+
+@pytest.fixture
 async def interview_repo(neo4j_driver):
     return InterviewRepository(neo4j_driver)
 
 
 @pytest.fixture
-async def interview_service(interview_repo):
-    return InterviewService(interview_repo)
+async def interview_service(interview_repo, candidate_repo, user_repo):
+    return InterviewService(interview_repo, candidate_repo, user_repo)
 
 
 @pytest.fixture
@@ -96,8 +103,9 @@ async def test_create_interview_candidate_not_found(interview_service, tech_spec
         tech_spec_id=tech_spec_user,
         scheduled_at=scheduled_at,
     )
-    created = await interview_service.create_interview(interview_data)
-    assert created is None
+    with pytest.raises(AppError) as ex:
+        await interview_service.create_interview(interview_data)
+        assert ex.value.args[1] == status.HTTP_400_BAD_REQUEST
 
 
 async def test_create_interview_tech_spec_not_found(interview_service, test_candidate):
@@ -107,8 +115,9 @@ async def test_create_interview_tech_spec_not_found(interview_service, test_cand
         tech_spec_id=uuid4(),
         scheduled_at=scheduled_at,
     )
-    created = await interview_service.create_interview(interview_data)
-    assert created is None
+    with pytest.raises(AppError) as ex:
+        await interview_service.create_interview(interview_data)
+        assert ex.value.args[1] == status.HTTP_400_BAD_REQUEST
 
 
 async def test_get_interview_by_id_ok(interview_service, test_candidate, tech_spec_user):
@@ -133,8 +142,9 @@ async def test_get_interview_by_id_ok(interview_service, test_candidate, tech_sp
 
 
 async def test_get_interview_by_id_not_found(interview_service):
-    fetched = await interview_service.get_interview_by_id(uuid4())
-    assert fetched is None
+    with pytest.raises(AppError) as ex:
+        await interview_service.get_interview_by_id(uuid4())
+        assert ex.value.args[1] == status.HTTP_404_NOT_FOUND
 
 
 async def test_filter_interviews_ok(interview_service, test_candidate, tech_spec_user, neo4j_driver):

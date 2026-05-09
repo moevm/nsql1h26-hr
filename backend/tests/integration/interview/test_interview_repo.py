@@ -87,7 +87,7 @@ async def test_get_interview_by_id(interview_repo, test_candidate, tech_spec_use
 async def test_get_interview_by_id_not_found(interview_repo):
     fetched = await interview_repo.get_interview_by_id(uuid4())
     assert fetched is None
-    
+
 
 async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j_driver):
     tech_spec_1 = uuid4()
@@ -103,9 +103,9 @@ async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j
                 """,
                 id=str(ts_id), email=email, full_name="Tech Spec", hash="hash"
             )
-    
+
     scheduled_at = datetime.now(timezone.utc) + timedelta(days=1)
-    
+
     # Интервью 1: результат INTERVIEW_PASSED
     passed = await interview_repo.create_interview(
         InterviewCreate(
@@ -117,7 +117,7 @@ async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j
     )
     assert passed is not None
     assert passed.tech_spec_id == tech_spec_1
-    
+
     # Интервью 2: результат INTERVIEW_FAILED (используем второго техспеца)
     failed = await interview_repo.create_interview(
         InterviewCreate(
@@ -129,15 +129,14 @@ async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j
     )
     assert failed is not None
     assert failed.tech_spec_id == tech_spec_2
-    
     # Фильтрация по INTERVIEW_FAILED — должно быть 1 интервью
     filters = InterviewFilter(result=InterviewResult.INTERVIEW_FAILED)
     result = await interview_repo.filter_interviews(filters)
-    # Отфильтровываем возможные None 
+    # Отфильтровываем возможные None
     valid_items = [item for item in result.items if item.tech_spec_id is not None]
     assert len(valid_items) == 1
     assert valid_items[0].result == InterviewResult.INTERVIEW_FAILED
-    
+
     # Фильтрация по INTERVIEW_PASSED — должно быть 1 интервью
     filters = InterviewFilter(result=InterviewResult.INTERVIEW_PASSED)
     result = await interview_repo.filter_interviews(filters)

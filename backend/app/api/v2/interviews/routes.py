@@ -5,6 +5,8 @@ from uuid import UUID
 
 from app.core.database import get_db
 from app.repositories.interview_repo import InterviewRepository
+from app.repositories.candidate_repo import CandidateRepository
+from app.repositories.user_repo import UserRepository
 from app.services.interview_service import InterviewService
 from app.models.interview import (
     InterviewCreate,
@@ -18,8 +20,10 @@ router = APIRouter()
 
 
 def get_interview_service(driver: AsyncDriver = Depends(get_db)) -> InterviewService:
+    candidate_repo = CandidateRepository(driver)
+    user_repo = UserRepository(driver)
     interview_repo = InterviewRepository(driver)
-    return InterviewService(interview_repo)
+    return InterviewService(interview_repo, candidate_repo,user_repo)
 
 
 @router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
