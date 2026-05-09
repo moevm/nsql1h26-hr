@@ -36,6 +36,10 @@ class OfferResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OfferPatch(BaseModel):
+    status: OfferStatus
+
+
 class OfferSort(StrEnum):
     SALARY = "salary"
     START_AT = "start_at"

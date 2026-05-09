@@ -1,7 +1,7 @@
 import pytest
 from uuid import uuid4, UUID
 from datetime import datetime, timedelta, timezone
-from app.models.offer import OfferCreate, OfferStatus, OfferFilter
+from app.models.offer import OfferCreate, OfferStatus, OfferFilter, OfferPatch
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate
 from app.models.user import UserCreate, Role
@@ -84,6 +84,15 @@ async def test_create_offer_ok(offer_repo, test_offer_create_data):
     offer = await offer_repo.create_offer(test_offer_create_data)
     assert offer is not None
     assert offer.id is not None
+
+
+async def test_patch_offer(offer_repo, test_offer_create_data):
+    created_offer = await offer_repo.create_offer(test_offer_create_data)
+    patched_offer = await offer_repo.patch_offer(
+        created_offer.id, OfferPatch(status=OfferStatus.APPROVED_MNG)
+    )
+    assert patched_offer.status == OfferStatus.APPROVED_MNG
+    assert patched_offer.id == created_offer.id
 
 
 async def test_get_offer_by_id_ok(offer_repo, test_offer_create_data):

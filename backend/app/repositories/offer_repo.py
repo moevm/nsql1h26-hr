@@ -5,7 +5,8 @@ from app.models.offer import (
     OfferResponse,
     OfferFilter,
     OfferFilterResponse,
-    OfferStatus
+    OfferStatus,
+    OfferPatch,
 )
 
 
@@ -42,7 +43,7 @@ class OfferRepository:
                 candidate_id=str(offer_data.candidate_id),
                 vacancy_id=str(offer_data.vacancy_id),
                 salary=offer_data.salary,
-                start_at=offer_data.start_at
+                start_at=offer_data.start_at,
             )
             record = await result.single()
             return OfferResponse(**record["offer_data"]) if record else None
@@ -52,8 +53,8 @@ class OfferRepository:
             result = await session.run(
                 f"""
                 MATCH (u:User)-[:CREATES]->(o:Offer {{id: $offer_id}})
-                OPTIONAL MATCH (o)-[:OFFERED]->(c:Candidate)
-                OPTIONAL MATCH (o)-[:CLOSES]->(v:Vacancy)
+                MATCH (o)-[:OFFERED]->(c:Candidate)
+                MATCH (o)-[:CLOSES]->(v:Vacancy)
                 RETURN o {{
                     .*,
                     status: [label IN labels(o) WHERE label in [{self.statuses}]][0],
@@ -69,10 +70,36 @@ class OfferRepository:
                 return None
             return OfferResponse(**record["offer_data"])
 
+    async def patch_offer(self, offer_id: UUID, patch: OfferPatch) -> OfferResponse:
+        async with self.driver.session() as session:
+            new_status = patch.status
+            remove_labels = " REMOVE " + ", ".join(f"o:{s}" for s in OfferStatus)
+            set_label = f" SET o:{new_status}"
+            query = f"""
+            MATCH (u:User)-[:CREATES]->(o:Offer {{id: $offer_id}})
+            MATCH (o)-[:OFFERED]->(c:Candidate)
+            MATCH (o)-[:CLOSES]->(v:Vacancy)
+            {remove_labels}{set_label}
+            RETURN o {{
+                    .*,
+                    status: [label IN labels(o) WHERE label in [{self.statuses}]][0],
+                    candidate_id: c.id,
+                    vacancy_id: v.id,
+                    created_by: u.id
+                }} AS offer_data
+            """
+            result = await session.run(query, offer_id=str(offer_id))
+            record = await result.single()
+            if not record:
+                return None
+            return OfferResponse(**record["offer_data"])
+
     async def filter_offers(self, filters: OfferFilter) -> OfferFilterResponse:
         async with self.driver.session() as session:
             status_filter = f":{filters.status}" if filters.status else ""
-            vac_status_filter = f":{filters.vacancy_status}" if filters.vacancy_status else ""
+            vac_status_filter = (
+                f":{filters.vacancy_status}" if filters.vacancy_status else ""
+            )
             base_query = f"""
             MATCH (o:Offer{status_filter})
             MATCH (u:User)-[:CREATES]->(o)

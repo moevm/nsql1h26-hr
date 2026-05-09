@@ -8,14 +8,21 @@ from app.models.offer import (
     OfferResponse,
     OfferFilter,
     OfferFilterResponse,
-    OfferStatus
+    OfferStatus,
+    OfferPatch,
 )
+from app.models.vacancy import VacancyStatus
 from app.models.candidate import CandidateStatus
 from app.core.exceptions import AppError
 
 
 class OfferService:
-    def __init__(self, offer_repo: OfferRepository, candidate_repo: CandidateRepository, vacancy_repo: VacancyRepository):
+    def __init__(
+        self,
+        offer_repo: OfferRepository,
+        candidate_repo: CandidateRepository,
+        vacancy_repo: VacancyRepository,
+    ):
         self.offer_repo = offer_repo
         self.candidate_repo = candidate_repo
         self.vacancy_repo = vacancy_repo
@@ -23,18 +30,25 @@ class OfferService:
     async def create_offer(self, offer_data: OfferCreate) -> OfferResponse:
         candidate_id = offer_data.candidate_id
         if offer_data.status != OfferStatus.PENDING:
-            raise AppError("New offer status must be pending", status.HTTP_400_BAD_REQUEST)
+            raise AppError(
+                "New offer status must be pending", status.HTTP_400_BAD_REQUEST
+            )
         candidate = await self.candidate_repo.get_candidate_by_id(candidate_id)
         if not candidate:
             raise AppError("Candidate not found", status.HTTP_400_BAD_REQUEST)
         if candidate["status"] != CandidateStatus.INTERVIEW_PASSED:
-            raise AppError("Candidate's status must be INTERVIEW_PASSED", status.HTTP_400_BAD_REQUEST)
+            raise AppError(
+                "Candidate's status must be INTERVIEW_PASSED",
+                status.HTTP_400_BAD_REQUEST,
+            )
         vacancy = await self.vacancy_repo.get_vacancy_by_id(offer_data.vacancy_id)
         if not vacancy:
             raise AppError("Vacancy not found", status.HTTP_400_BAD_REQUEST)
         offer = await self.offer_repo.create_offer(offer_data)
         if offer:
-            await self.candidate_repo.patch_candidate(candidate["id"], { "status": CandidateStatus.OFFER })
+            await self.candidate_repo.patch_candidate(
+                candidate["id"], {"status": CandidateStatus.OFFER}
+            )
         return offer
 
     async def get_offer_by_id(self, offer_id: UUID) -> OfferResponse:
@@ -45,3 +59,25 @@ class OfferService:
 
     async def filter_offers(self, filters: OfferFilter) -> OfferFilterResponse:
         return await self.offer_repo.filter_offers(filters)
+
+    async def patch_offer(self, offer_id: UUID, patch: OfferPatch) -> OfferResponse:
+        offer = await self.offer_repo.get_offer_by_id(offer_id)
+        if not offer:
+            raise AppError("Offer not found", status.HTTP_404_NOT_FOUND)
+
+        if patch.status == OfferStatus.APPROVED_CND:
+            await self.candidate_repo.patch_candidate(
+                offer.candidate_id, {"status": CandidateStatus.HIRED}
+            )
+            await self.vacancy_repo.patch_vacancy(
+                offer.vacancy_id, {"status": VacancyStatus.CLOSED}
+            )
+        if (
+            patch.status == OfferStatus.REJECTED_MNG
+            or patch.status == OfferStatus.REJECTED_CNF
+        ):
+            await self.candidate_repo.patch_candidate(
+                offer.candidate_id, {"status": CandidateStatus.REJECTED}
+            )
+        patched_offer = await self.offer_repo.patch_offer(offer_id, patch)
+        return patched_offer

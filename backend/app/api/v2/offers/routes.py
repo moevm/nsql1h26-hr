@@ -13,6 +13,7 @@ from app.models.offer import (
     OfferResponse,
     OfferFilter,
     OfferFilterResponse,
+    OfferPatch
 )
 from app.core.security import require_role
 
@@ -49,3 +50,16 @@ async def filter_offers(
     offer_service: OfferService = Depends(get_offer_service),
 ):
     return await offer_service.filter_offers(filters)
+
+
+@router.patch(
+    "/{offer_id}", response_model=OfferResponse, status_code=status.HTTP_200_OK
+)
+async def patch_offer(
+    offer_id: UUID,
+    patch_data: OfferPatch,
+    offer_service: OfferService = Depends(get_offer_service),
+    _: dict = Depends(require_role("MANAGER")),
+):
+    offer = await offer_service.patch_offer(offer_id, patch_data)
+    return offer
