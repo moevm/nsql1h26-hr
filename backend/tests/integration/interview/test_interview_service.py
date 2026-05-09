@@ -16,7 +16,6 @@ from app.core.exceptions import AppError
 from app.models.user import UserCreate, Role
 from app.services.user_service import UserService
 
-# Добавить фикстуру user_service
 @pytest.fixture
 async def user_service(user_repo):
     return UserService(user_repo)
@@ -75,7 +74,7 @@ async def tech_spec_user(user_service):
         UserCreate(
             email="tech.service@example.com",
             full_name="Tech Service",
-            password="hash123456",  # В тестах пароль не важен, т.к. хэширование не реализовано
+            password="hash123456", 
             role=Role.TECH_SPEC
         )
     )
@@ -409,7 +408,6 @@ async def test_filter_interviews_pagination(
 ):
     """Пагинация через limit и offset."""
     now = datetime.now(timezone.utc)
-    # Создаём 3 интервью для одного кандидата
     for i in range(3):
         await interview_service.create_interview(
             InterviewCreate(
@@ -419,18 +417,18 @@ async def test_filter_interviews_pagination(
             )
         )
 
-    # limit=2, offset=0 -> должно вернуться 2 элемента, total=3
+    # limit=2, offset=0 должно вернуться 2 элемента, total=3
     filters = InterviewFilter(limit=2, offset=0)
     result = await interview_service.filter_interviews(filters)
     assert result.total == 3
     assert len(result.items) == 2
 
-    # offset=1 -> всё ещё 3 всего, но два других элемента
+    # offset=1 всё ещё 3 всего, но два других элемента
     filters.offset = 1
     result = await interview_service.filter_interviews(filters)
     assert result.total == 3
     assert len(result.items) == 2
-    # убедимся, что первый элемент из второго запроса не совпадает с первым из первого запроса
+    # проверка, что первый элемент из второго запроса не совпадает с первым из первого запроса
     first_page_ids = {i.id for i in (await interview_service.filter_interviews(InterviewFilter(limit=2, offset=0))).items}
     second_page_ids = {i.id for i in result.items}
     # пересечение должно быть минимальным (только один общий, если limit=2 offset=1 при трёх записях)

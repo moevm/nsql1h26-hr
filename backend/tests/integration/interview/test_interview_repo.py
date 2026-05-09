@@ -8,7 +8,13 @@ from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.vacancy_repo import VacancyRepository
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate
-from app.models.helpers import SortOrder
+from app.models.user import UserCreate, Role
+from app.repositories.user_repo import UserRepository
+
+
+@pytest.fixture
+async def user_repo(neo4j_driver):
+    return UserRepository(neo4j_driver)
 
 
 @pytest.fixture
@@ -49,19 +55,16 @@ async def test_candidate(candidate_repo, test_vacancy):
 
 
 @pytest.fixture
-async def tech_spec_user(neo4j_driver):
-    user_id = uuid4()
-    async with neo4j_driver.session() as session:
-        await session.run(
-            """
-            CREATE (u:User:TECH_SPEC {
-                id: $id, email: $email, full_name: $full_name,
-                password_hash: $hash, role: 'TECH_SPEC'
-            })
-            """,
-            id=str(user_id), email="tech@spec.com", full_name="Tech Spec", hash="hash"
-        )
-    return user_id
+async def tech_spec_user(user_repo):
+    user = await user_repo.create_user(
+        {
+            "email": "tech.service@example.com",
+            "full_name": "Tech Service",
+            "password_hash": "hash123456",
+            "role": Role.TECH_SPEC
+        }
+    )
+    return user.id
 
 
 async def test_get_interview_by_id(interview_repo, test_candidate, tech_spec_user):
@@ -89,20 +92,25 @@ async def test_get_interview_by_id_not_found(interview_repo):
     assert fetched is None
 
 
-async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j_driver):
-    tech_spec_1 = uuid4()
-    tech_spec_2 = uuid4()
-    async with neo4j_driver.session() as session:
-        for ts_id, email in [(tech_spec_1, "tech1@spec.com"), (tech_spec_2, "tech2@spec.com")]:
-            await session.run(
-                """
-                CREATE (u:User:TECH_SPEC {
-                    id: $id, email: $email, full_name: $full_name,
-                    password_hash: $hash, role: 'TECH_SPEC'
-                })
-                """,
-                id=str(ts_id), email=email, full_name="Tech Spec", hash="hash"
-            )
+async def test_filter_interviews_by_result(interview_repo, test_candidate, user_repo):
+    tech_spec_1_user = await user_repo.create_user(
+        {
+            "email": "tech1@spec.com",
+            "full_name": "Tech Spec 1",
+            "password_hash": "hash123456",
+            "role": Role.TECH_SPEC
+        }
+    )
+    tech_spec_2_user = await user_repo.create_user(
+        {
+            "email": "tech2@spec.com",
+            "full_name": "Tech Spec 2",
+            "password_hash": "hash123456",
+            "role": Role.TECH_SPEC
+        }
+    )
+    tech_spec_1 = tech_spec_1_user.id
+    tech_spec_2 = tech_spec_2_user.id
 
     scheduled_at = datetime.now(timezone.utc) + timedelta(days=1)
 
@@ -129,6 +137,7 @@ async def test_filter_interviews_by_result(interview_repo, test_candidate, neo4j
     )
     assert failed is not None
     assert failed.tech_spec_id == tech_spec_2
+    
     # Фильтрация по INTERVIEW_FAILED — должно быть 1 интервью
     filters = InterviewFilter(result=InterviewResult.INTERVIEW_FAILED)
     result = await interview_repo.filter_interviews(filters)
@@ -188,5 +197,5 @@ async def test_filter_interviews_sorting(interview_repo, test_vacancy, tech_spec
     )
     result = await interview_repo.filter_interviews(filters)
     assert result.total == 2
-    # Раньше запланированное интервью  должно быть первым
+    # Раньше запланированное интервью должно быть первым
     assert result.items[0].scheduled_at < result.items[1].scheduled_at
