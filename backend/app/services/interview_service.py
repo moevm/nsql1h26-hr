@@ -42,6 +42,8 @@ class InterviewService:
                 "Tech spec with given ID not found", status.HTTP_400_BAD_REQUEST
             )
         created = await self.interview_repo.create_interview(interview_data)
+        if created:
+            await self.candidate_repo.patch_candidate(interview_data.candidate_id, {"status": CandidateStatus.AWAIT_INTERVIEW})
         return created
 
     async def get_interview_by_id(self, interview_id: UUID) -> InterviewResponse:
@@ -79,6 +81,10 @@ class InterviewService:
         )
         if patch.result == InterviewResult.INTERVIEW_PASSED:
             await self.candidate_repo.patch_candidate(
-                patched_interview.candidate_id, {"status": CandidateStatus.OFFER}
+                patched_interview.candidate_id, {"status": CandidateStatus.INTERVIEW_PASSED}
+            )
+        elif patch.result == InterviewResult.INTERVIEW_FAILED:
+            await self.candidate_repo.patch_candidate(
+                patched_interview.candidate_id, {"status": CandidateStatus.REJECTED}
             )
         return patched_interview
