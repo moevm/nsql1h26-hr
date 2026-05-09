@@ -85,7 +85,7 @@ components:
         email: { type: string, format: email }
         phone: { type: string, pattern: '^\+7\d{10}$' }
         resume_url: { type: string, format: uri }
-        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_FAILED, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
+        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
         test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
       required: [full_name, email, phone, status]
@@ -98,7 +98,7 @@ components:
         email: { type: string, format: email }
         phone: { type: string, pattern: '^\+7\d{10}$' }
         resume_url: { type: string, format: uri }
-        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_FAILED, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
+        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
         test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
       required: [id, full_name, email, phone, status]
@@ -657,7 +657,7 @@ paths:
         # Статус
         - name: status
           in: query
-          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_FAILED, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
+          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         # Связи
         - name: vacancy_id
           in: query
@@ -767,7 +767,7 @@ paths:
                 email: { type: string, format: email }
                 phone: { type: string, pattern: '^\+7\d{10}$' }
                 resume_url: { type: string, format: uri }
-                status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_FAILED, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
+                status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
                 vacancy_id: { type: string, format: uuid }
                 test_task_id: { type: string, format: uuid, description: "Назначить тест (связь COMPLETES)" }
       responses:
@@ -921,7 +921,7 @@ paths:
               required: [feedback, result]
       responses:
         '200':
-          description: Фидбек сохранён. При INTERVIEW_PASSED статус кандидата → INTERVIEW_PASSED, при INTERVIEW_FAILED статус кандидата → INTERVIEW_FAILED
+          description: Фидбек сохранён. При INTERVIEW_PASSED статус кандидата → INTERVIEW_PASSED, при INTERVIEW_FAILED статус кандидата → REJECTED
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InterviewResponse' }
@@ -968,7 +968,7 @@ paths:
           description: Поиск по email кандидата (подстрока)
         - name: candidate_status
           in: query
-          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_FAILED, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
+          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
           description: Статус кандидата
 
         - name: vacancy_id
@@ -1025,7 +1025,7 @@ paths:
         '403': { description: Недостаточно прав (требуется MANAGER, HR или ADMIN) }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
-      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER. Создавать оффер можно только для кандидата без офферов в статусе INTERVIEW_PASSED
+      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER. Создавать оффер можно только для кандидата в статусе INTERVIEW_PASSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -1039,7 +1039,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OfferResponse' }
-        '400': { description: Кандидат не в статусе INTERVIEW_PASSED или уже есть активный оффер }
+        '400': { description: Кандидат не в статусе INTERVIEW_PASSED }
 
   /v2/offers/{id}:
     get:
@@ -1060,7 +1060,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
-      description: Роль MANAGER
+      description: Роль MANAGER. При  статусе оффера REJECTED_MNG  или REJECTED_CNF статус кандидата → REJECTED. При APPROVED_CND статус кандидата → HIRED, вакансия → CLOSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
