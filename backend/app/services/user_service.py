@@ -1,6 +1,6 @@
 from typing import Optional
 from app.repositories.user_repo import UserRepository
-from app.models.user import UserDB, UserFilter
+from app.models.user import UserDB, UserFilter, UserCreate
 
 
 class UserService:
@@ -13,7 +13,7 @@ class UserService:
     async def get_user_by_id(self, user_id: str) -> Optional[UserDB]:
         return await self.user_repo.get_user_by_id(user_id)
 
-    async def create_user(self, user_data: dict) -> UserDB:
+    async def create_user(self, user_data: UserCreate) -> UserDB:
         return await self.user_repo.create_user(user_data)
 
     async def filter_users(self, filters: UserFilter) -> dict:
