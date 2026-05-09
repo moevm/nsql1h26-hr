@@ -21,7 +21,7 @@ class OfferRepository:
                 MATCH (u:User {{id: $created_by}})
                 MATCH (c:Candidate {{id: $candidate_id}})
                 MATCH (v:Vacancy {{id: $vacancy_id}})
-                CREATE (o:Offer:{OfferStatus.PENDING} {{
+                CREATE (o:Offer:{offer_data.status} {{
                     id: randomUUID(),
                     salary: $salary,
                     start_at: $start_at,
@@ -75,9 +75,9 @@ class OfferRepository:
             vac_status_filter = f":{filters.vacancy_status}" if filters.vacancy_status else ""
             base_query = f"""
             MATCH (o:Offer{status_filter})
-            OPTIONAL MATCH (u:User)-[:CREATES]->(o)
-            OPTIONAL MATCH (o)-[:OFFERED]->(c:Candidate)
-            OPTIONAL MATCH (o)-[:CLOSES]->(v:Vacancy{vac_status_filter})
+            MATCH (u:User)-[:CREATES]->(o)
+            MATCH (o)-[:OFFERED]->(c:Candidate)
+            MATCH (o)-[:CLOSES]->(v:Vacancy{vac_status_filter})
             """
             params = {
                 "limit": filters.limit,

@@ -8,6 +8,7 @@ from app.models.offer import (
     OfferResponse,
     OfferFilter,
     OfferFilterResponse,
+    OfferStatus
 )
 from app.models.candidate import CandidateStatus
 from app.core.exceptions import AppError
@@ -21,6 +22,8 @@ class OfferService:
 
     async def create_offer(self, offer_data: OfferCreate) -> OfferResponse:
         candidate_id = offer_data.candidate_id
+        if offer_data.status != OfferStatus.PENDING:
+            raise AppError("New offer status must be pending", status.HTTP_400_BAD_REQUEST)
         candidate = await self.candidate_repo.get_candidate_by_id(candidate_id)
         if not candidate:
             raise AppError("Candidate not found", status.HTTP_400_BAD_REQUEST)
