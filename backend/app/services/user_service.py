@@ -1,12 +1,25 @@
 from typing import Optional, List
+from fastapi import status
 from app.core.security import get_password_hash
+from app.core.exceptions import AppError
 from app.repositories.user_repo import UserRepository
-from app.models.user import UserDB, UserFilter, UserCreate
+from app.models.user import UserDB, UserFilter, UserCreate, UserResponse
 
 
 class UserService:
     def __init__(self, user_repo: UserRepository):
         self.user_repo = user_repo
+
+    async def register_user(self, user_info: UserCreate) -> UserResponse:
+        if await self.user_repo.get_user_by_email(user_info.email) is not None:
+            raise AppError(f"User with email {user_info.email} already exists", status.HTTP_409_CONFLICT)
+        created_user = await self.create_user(user_data=user_info)
+        return UserResponse(
+            email=created_user.email,
+            full_name=created_user.full_name,
+            role=created_user.role,
+            id=created_user.id
+        )
 
     async def get_user_by_email(self, email: str) -> Optional[UserDB]:
         return await self.user_repo.get_user_by_email(email)

@@ -3,7 +3,7 @@ from neo4j import AsyncDriver
 
 from app.core.database import get_db
 from app.core.security import verify_password, create_access_token
-from app.models.user import UserLogin, TokenResponse, UserResponse
+from app.models.user import UserLogin, TokenResponse, UserResponse, UserCreate
 from app.repositories.user_repo import UserRepository
 from app.services.user_service import UserService
 
@@ -49,3 +49,11 @@ async def login(
             role=user.role,
         ),
     )
+
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    user_info: UserCreate,
+    user_service: UserService = Depends(get_user_service),
+):
+    return await user_service.register_user(user_info)
