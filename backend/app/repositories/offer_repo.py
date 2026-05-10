@@ -26,7 +26,7 @@ class OfferRepository:
                     id: randomUUID(),
                     salary: $salary,
                     start_at: $start_at,
-                    created_at: timestamp()
+                    created_at: datetime()
                 }})
                 CREATE (u)-[:CREATES]->(o)
                 CREATE (o)-[:OFFERED]->(c)
