@@ -184,69 +184,6 @@ async def test_filter_offers_pagination(offer_repo, test_offer_create_data):
     assert len(first_ids & second_ids) == 1  # перекрытие (из-за offset=1 при total=3)
 
 
-async def test_filter_offers_sorting_by_salary(offer_repo, test_offer_create_data):
-    """Сортировка по зарплате (ASC / DESC)"""
-    base = test_offer_create_data
-    salaries = [50000, 150000, 100000]
-    created_ids = []
-    for sal in salaries:
-        data = OfferCreate(
-            candidate_id=base.candidate_id,
-            vacancy_id=base.vacancy_id,
-            created_by=base.created_by,
-            salary=sal,
-            start_at=base.start_at,
-        )
-        offer = await offer_repo.create_offer(data)
-        created_ids.append(offer.id)
-
-    # ASC
-    filters = OfferFilter(sort_by="salary", sort_order="asc")
-    result = await offer_repo.filter_offers(filters)
-    # Извлекаем зарплаты в порядке сортировки
-    salaries_asc = [o.salary for o in result.items if o.id in created_ids]
-    assert salaries_asc == sorted(salaries)
-
-    # DESC
-    filters.sort_order = "desc"
-    result = await offer_repo.filter_offers(filters)
-    salaries_desc = [o.salary for o in result.items if o.id in created_ids]
-    assert salaries_desc == sorted(salaries, reverse=True)
-
-
-async def test_filter_offers_sorting_by_start_at(offer_repo, test_offer_create_data):
-    """Сортировка по дате начала (start_at)"""
-    base = test_offer_create_data
-    now = datetime.now(timezone.utc)
-    start_dates = [
-        now + timedelta(days=10),
-        now + timedelta(days=30),
-        now + timedelta(days=20),
-    ]
-    created_ids = []
-    for start in start_dates:
-        data = OfferCreate(
-            candidate_id=base.candidate_id,
-            vacancy_id=base.vacancy_id,
-            created_by=base.created_by,
-            salary=base.salary,
-            start_at=start,
-        )
-        offer = await offer_repo.create_offer(data)
-        created_ids.append(offer.id)
-
-    # ASC
-    filters = OfferFilter(sort_by="start_at", sort_order="asc")
-    result = await offer_repo.filter_offers(filters)
-    start_asc = [o.start_at for o in result.items if o.id in created_ids]
-    assert start_asc == sorted(start_dates)
-
-    # DESC
-    filters.sort_order = "desc"
-    result = await offer_repo.filter_offers(filters)
-    start_desc = [o.start_at for o in result.items if o.id in created_ids]
-    assert start_desc == sorted(start_dates, reverse=True)
-
 
 # ++++++++++++++++++++++++++++++++++++++++++++++ тесты, которых вчера не было
 
@@ -355,12 +292,75 @@ async def test_filter_offers_by_start_at_range(offer_repo, test_offer_create_dat
     assert created.id not in [o.id for o in result.items]
 
 
-# ========== Недостающие сортировки ==========
+# ========== Сортировки ==========
+
+async def test_filter_offers_sorting_by_salary(offer_repo, test_offer_create_data):
+    """Сортировка по зарплате (ASC / DESC)"""
+    base = test_offer_create_data
+    salaries = [50000, 150000, 100000]
+    created_ids = []
+    for sal in salaries:
+        data = OfferCreate(
+            candidate_id=base.candidate_id,
+            vacancy_id=base.vacancy_id,
+            created_by=base.created_by,
+            salary=sal,
+            start_at=base.start_at,
+        )
+        offer = await offer_repo.create_offer(data)
+        created_ids.append(offer.id)
+
+    # ASC
+    filters = OfferFilter(sort_by="salary", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    # Извлекаем зарплаты в порядке сортировки
+    salaries_asc = [o.salary for o in result.items if o.id in created_ids]
+    assert salaries_asc == sorted(salaries)
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    salaries_desc = [o.salary for o in result.items if o.id in created_ids]
+    assert salaries_desc == sorted(salaries, reverse=True)
+
+
+async def test_filter_offers_sorting_by_start_at(offer_repo, test_offer_create_data):
+    """Сортировка по дате начала (start_at)"""
+    base = test_offer_create_data
+    now = datetime.now(timezone.utc)
+    start_dates = [
+        now + timedelta(days=10),
+        now + timedelta(days=30),
+        now + timedelta(days=20),
+    ]
+    created_ids = []
+    for start in start_dates:
+        data = OfferCreate(
+            candidate_id=base.candidate_id,
+            vacancy_id=base.vacancy_id,
+            created_by=base.created_by,
+            salary=base.salary,
+            start_at=start,
+        )
+        offer = await offer_repo.create_offer(data)
+        created_ids.append(offer.id)
+
+    # ASC
+    filters = OfferFilter(sort_by="start_at", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    start_asc = [o.start_at for o in result.items if o.id in created_ids]
+    assert start_asc == sorted(start_dates)
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    start_desc = [o.start_at for o in result.items if o.id in created_ids]
+    assert start_desc == sorted(start_dates, reverse=True)
+
 
 async def test_filter_offers_sorting_by_status(offer_repo, test_offer_create_data):
     """Сортировка по статусу оффера (метке)"""
     base = test_offer_create_data
-    # Создаём офферы с разными статусами
     statuses = [OfferStatus.PENDING, OfferStatus.APPROVED_MNG, OfferStatus.REJECTED_MNG]
     created_ids = []
     for st in statuses:
@@ -373,7 +373,6 @@ async def test_filter_offers_sorting_by_status(offer_repo, test_offer_create_dat
     filters = OfferFilter(sort_by="status", sort_order="asc")
     result = await offer_repo.filter_offers(filters)
     statuses_asc = [o.status for o in result.items if o.id in created_ids]
-    # Ожидаем: APPROVED_MNG, PENDING, REJECTED_MNG (алфавитный порядок)
     expected = sorted(statuses)
     assert statuses_asc == expected
 
@@ -385,30 +384,128 @@ async def test_filter_offers_sorting_by_status(offer_repo, test_offer_create_dat
 
 
 
+async def test_filter_offers_sorting_by_candidate_name(offer_repo, candidate_repo, test_vacancy, test_user):
+    """Сортировка по имени кандидата (ASC / DESC)"""
+    candidate_a = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="Anna Candidate",
+            email="anna@example.com",
+            phone="+71234567890",
+            status=CandidateStatus.INTERVIEW_PASSED,
+            vacancy_id=test_vacancy["id"],
+        )
+    )
+    candidate_b = await candidate_repo.create_candidate(
+        CandidateCreate(
+            full_name="Boris Candidate",
+            email="boris@example.com",
+            phone="+71234567891",
+            status=CandidateStatus.INTERVIEW_PASSED,
+            vacancy_id=test_vacancy["id"],
+        )
+    )
+    candidate_a_id = UUID(candidate_a["id"])
+    candidate_b_id = UUID(candidate_b["id"])
+
+    start_at = datetime.now(timezone.utc) + timedelta(days=30)
+    # оффер для кандидата B (должен быть вторым при ASC)
+    offer_b = await offer_repo.create_offer(
+        OfferCreate(
+            candidate_id=candidate_b_id,
+            vacancy_id=UUID(test_vacancy["id"]),
+            created_by=test_user.id,
+            salary=100000,
+            start_at=start_at,
+        )
+    )
+    # оффер для кандидата A (должен быть первым при ASC)
+    offer_a = await offer_repo.create_offer(
+        OfferCreate(
+            candidate_id=candidate_a_id,
+            vacancy_id=UUID(test_vacancy["id"]),
+            created_by=test_user.id,
+            salary=100000,
+            start_at=start_at,
+        )
+    )
+
+    # ASC
+    filters = OfferFilter(sort_by="candidate_name", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    ids_asc = [o.id for o in result.items if o.id in (offer_a.id, offer_b.id)]
+    assert ids_asc == [offer_a.id, offer_b.id]
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    ids_desc = [o.id for o in result.items if o.id in (offer_a.id, offer_b.id)]
+    assert ids_desc == [offer_b.id, offer_a.id]
+
+
+async def test_filter_offers_sorting_by_vacancy_title(offer_repo, vacancy_repo, test_candidate, test_user):
+    """Сортировка по названию вакансии (ASC / DESC)"""
+    vacancy_alpha = await vacancy_repo.create_vacancy(
+        VacancyCreate(title="Alpha Vacancy", description="First")
+    )
+    vacancy_beta = await vacancy_repo.create_vacancy(
+        VacancyCreate(title="Beta Vacancy", description="Second")
+    )
+    start_at = datetime.now(timezone.utc) + timedelta(days=30)
+
+    # ффер для Beta (должен быть вторым при ASC)
+    offer_beta = await offer_repo.create_offer(
+        OfferCreate(
+            candidate_id=test_candidate["id"],
+            vacancy_id=UUID(vacancy_beta["id"]),
+            created_by=test_user.id,
+            salary=100000,
+            start_at=start_at,
+        )
+    )
+    # оффер для Alpha (должен быть первым при ASC)
+    offer_alpha = await offer_repo.create_offer(
+        OfferCreate(
+            candidate_id=test_candidate["id"],
+            vacancy_id=UUID(vacancy_alpha["id"]),
+            created_by=test_user.id,
+            salary=100000,
+            start_at=start_at,
+        )
+    )
+
+    # ASC
+    filters = OfferFilter(sort_by="vacancy_title", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    ids_asc = [o.id for o in result.items if o.id in (offer_alpha.id, offer_beta.id)]
+    assert ids_asc == [offer_alpha.id, offer_beta.id]
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    ids_desc = [o.id for o in result.items if o.id in (offer_alpha.id, offer_beta.id)]
+    assert ids_desc == [offer_beta.id, offer_alpha.id]
+
+
 # ========== Комбинация фильтров ==========
 
 async def test_filter_offers_combined_status_and_salary(offer_repo, test_offer_create_data):
     """Комбинация фильтров: статус оффера + диапазон зарплаты"""
     base = test_offer_create_data
-    # Создаём APPROVED_MNG с зарплатой 100000
     data1 = base.model_copy(deep=True)
     data1.status = OfferStatus.APPROVED_MNG
     data1.salary = 100000
     offer1 = await offer_repo.create_offer(data1)
 
-    # Создаём APPROVED_MNG с зарплатой 200000
     data2 = base.model_copy(deep=True)
     data2.status = OfferStatus.APPROVED_MNG
     data2.salary = 200000
     offer2 = await offer_repo.create_offer(data2)
 
-    # Создаём PENDING с зарплатой 150000 (не должен попасть)
     data3 = base.model_copy(deep=True)
     data3.status = OfferStatus.PENDING
     data3.salary = 150000
     await offer_repo.create_offer(data3)
 
-    # Фильтр: статус APPROVED_MNG и зарплата от 80000 до 150000
     filters = OfferFilter(
         status=OfferStatus.APPROVED_MNG,
         salary_from=80000,
