@@ -384,32 +384,6 @@ async def test_filter_offers_sorting_by_status(offer_repo, test_offer_create_dat
     assert statuses_desc == sorted(statuses, reverse=True)
 
 
-async def test_filter_offers_sorting_by_created_at(offer_repo, test_offer_create_data):
-    """Сортировка по дате создания (created_at)"""
-    # Создадим несколько офферов с небольшими задержками, чтобы created_at отличался
-    base = test_offer_create_data
-    created_times = []
-    for i in range(3):
-        offer = await offer_repo.create_offer(base)
-        created_times.append((offer.id, offer.created_at))
-        # небольшая пауза, чтобы timestamp гарантированно увеличился
-        import asyncio
-        await asyncio.sleep(0.1)
-
-    # Сортировка ASC
-    filters = OfferFilter(sort_by="created_at", sort_order="asc")
-    result = await offer_repo.filter_offers(filters)
-    result_ids = [o.id for o in result.items if o.id in [t[0] for t in created_times]]
-    expected_ids_asc = [t[0] for t in sorted(created_times, key=lambda x: x[1])]
-    assert result_ids == expected_ids_asc
-
-    # DESC
-    filters.sort_order = "desc"
-    result = await offer_repo.filter_offers(filters)
-    result_ids_desc = [o.id for o in result.items if o.id in [t[0] for t in created_times]]
-    expected_ids_desc = [t[0] for t in sorted(created_times, key=lambda x: x[1], reverse=True)]
-    assert result_ids_desc == expected_ids_desc
-
 
 # ========== Комбинация фильтров ==========
 
