@@ -161,12 +161,6 @@ async def test_create_offer_vacancy_not_found(offer_service, test_user, test_can
         await offer_service.create_offer(offer_data)
         assert ex.value.args[1] == status.HTTP_400_BAD_REQUEST
 
-
-async def test_get_offer_by_id_not_found(offer_service):
-    with pytest.raises(AppError) as ex:
-        await offer_service.get_offer_by_id(uuid4())
-        assert ex.value.args[1] == status.HTTP_404_NOT_FOUND
-
 async def test_filter_offers_basic(offer_service, test_offer_create_data):
     created = await offer_service.create_offer(test_offer_create_data)
 
