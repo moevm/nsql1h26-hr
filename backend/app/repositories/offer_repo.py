@@ -100,10 +100,13 @@ class OfferRepository:
             vac_status_filter = (
                 f":{filters.vacancy_status}" if filters.vacancy_status else ""
             )
+            cand_status_filter = (
+                f":{filters.candidate_status}" if filters.candidate_status else ""
+            )
             base_query = f"""
             MATCH (o:Offer{status_filter})
             MATCH (u:User)-[:CREATES]->(o)
-            MATCH (o)-[:OFFERED]->(c:Candidate)
+            MATCH (o)-[:OFFERED]->(c:Candidate{cand_status_filter})
             MATCH (o)-[:CLOSES]->(v:Vacancy{vac_status_filter})
             """
             params = {
@@ -146,10 +149,6 @@ class OfferRepository:
                     "toLower(c.email) CONTAINS toLower($candidate_email)"
                 )
                 params["candidate_email"] = filters.candidate_email
-            if filters.candidate_status:
-                where_clauses.append("c.status = $candidate_status")
-                params["candidate_status"] = filters.candidate_status
-
             if filters.vacancy_id:
                 where_clauses.append("v.id = $vacancy_id")
                 params["vacancy_id"] = str(filters.vacancy_id)
