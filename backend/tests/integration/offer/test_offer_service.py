@@ -135,7 +135,6 @@ async def test_get_offer_by_id_not_found(offer_service):
 
 
 async def test_create_offer_candidate_not_found(offer_service, test_user, test_vacancy):
-    """Создание оффера для несуществующего кандидата"""
     start_at = datetime.now(timezone.utc) + timedelta(days=30)
     offer_data = OfferCreate(
         candidate_id=uuid4(),  # несуществующий ID
@@ -150,7 +149,6 @@ async def test_create_offer_candidate_not_found(offer_service, test_user, test_v
 
 
 async def test_create_offer_vacancy_not_found(offer_service, test_user, test_candidate):
-    """Создание оффера для несуществующей вакансии"""
     start_at = datetime.now(timezone.utc) + timedelta(days=30)
     offer_data = OfferCreate(
         candidate_id=test_candidate["id"],
@@ -168,3 +166,23 @@ async def test_get_offer_by_id_not_found(offer_service):
     with pytest.raises(AppError) as ex:
         await offer_service.get_offer_by_id(uuid4())
         assert ex.value.args[1] == status.HTTP_404_NOT_FOUND
+
+async def test_filter_offers_basic(offer_service, test_offer_create_data):
+    created = await offer_service.create_offer(test_offer_create_data)
+
+    # Фильтр без параметров
+    filters = OfferFilter()
+    result = await offer_service.filter_offers(filters)
+    assert result.total >= 1
+    assert any(item.id == created.id for item in result.items)
+
+    # Фильтр по candidate_id
+    filters = OfferFilter(candidate_id=created.candidate_id)
+    result = await offer_service.filter_offers(filters)
+    assert result.total >= 1
+    assert all(item.candidate_id == created.candidate_id for item in result.items)
+
+    # Фильтр по несуществующему candidate_id – пустой результат
+    filters = OfferFilter(candidate_id=uuid4())
+    result = await offer_service.filter_offers(filters)
+    assert result.total == 0
