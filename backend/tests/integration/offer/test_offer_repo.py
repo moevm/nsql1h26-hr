@@ -246,3 +246,201 @@ async def test_filter_offers_sorting_by_start_at(offer_repo, test_offer_create_d
     result = await offer_repo.filter_offers(filters)
     start_desc = [o.start_at for o in result.items if o.id in created_ids]
     assert start_desc == sorted(start_dates, reverse=True)
+
+
+# ++++++++++++++++++++++++++++++++++++++++++++++ тесты, которых вчера не было
+
+async def test_filter_offers_by_candidate_email(offer_repo, test_offer_create_data):
+    """Фильтр по части email кандидата"""
+    created = await offer_repo.create_offer(test_offer_create_data)
+
+    # Поиск по существующей части email
+    filters = OfferFilter(candidate_email="offer_candidate")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    # Поиск по несуществующей подстроке
+    filters = OfferFilter(candidate_email="nonexistent")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total == 0
+
+
+async def test_filter_offers_by_candidate_status(offer_repo, test_offer_create_data):
+    """Фильтр по статусу кандидата (метка)"""
+    # Кандидат уже создан в статусе INTERVIEW_PASSED
+    created = await offer_repo.create_offer(test_offer_create_data)
+
+    filters = OfferFilter(candidate_status=CandidateStatus.INTERVIEW_PASSED)
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    # Фильтр по другому статусу – не должно быть
+    filters = OfferFilter(candidate_status=CandidateStatus.NEW)
+    result = await offer_repo.filter_offers(filters)
+    assert created.id not in [o.id for o in result.items]
+
+
+async def test_filter_offers_by_vacancy_title(offer_repo, test_offer_create_data, test_vacancy):
+    """Фильтр по части названия вакансии"""
+    created = await offer_repo.create_offer(test_offer_create_data)
+
+    filters = OfferFilter(vacancy_title="Test Offer")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    filters = OfferFilter(vacancy_title="Nonexistent")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total == 0
+
+
+async def test_filter_offers_by_created_by(offer_repo, test_offer_create_data, test_user):
+    """Фильтр по ID создателя оффера"""
+    created = await offer_repo.create_offer(test_offer_create_data)
+
+    filters = OfferFilter(created_by=test_user.id)
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    filters = OfferFilter(created_by=uuid4())
+    result = await offer_repo.filter_offers(filters)
+    assert result.total == 0
+
+
+async def test_filter_offers_by_created_by_name(offer_repo, test_offer_create_data, test_user):
+    """Фильтр по имени создателя (подстрока)"""
+    created = await offer_repo.create_offer(test_offer_create_data)
+
+    filters = OfferFilter(created_by_name="Test HR")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    filters = OfferFilter(created_by_name="Nonexistent")
+    result = await offer_repo.filter_offers(filters)
+    assert result.total == 0
+
+
+async def test_filter_offers_by_created_at_range(offer_repo, test_offer_create_data):
+    """Фильтр по диапазону created_at (from / to)"""
+    created = await offer_repo.create_offer(test_offer_create_data)
+    now_sec = int(datetime.now(timezone.utc).timestamp())
+    filters = OfferFilter(created_at_from=0, created_at_to=now_sec + 100)
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+
+async def test_filter_offers_by_start_at_range(offer_repo, test_offer_create_data):
+    """Фильтр по диапазону start_at (from / to)"""
+    base = test_offer_create_data
+    # Создаём оффер с start_at через 30 дней
+    created = await offer_repo.create_offer(base)
+
+    now = datetime.now(timezone.utc)
+    from_ts = int((now + timedelta(days=29)).timestamp())
+    to_ts = int((now + timedelta(days=31)).timestamp())
+
+    filters = OfferFilter(start_at_from=from_ts, start_at_to=to_ts)
+    result = await offer_repo.filter_offers(filters)
+    assert result.total >= 1
+    assert created.id in [o.id for o in result.items]
+
+    # Диапазон, не включающий start_at
+    filters = OfferFilter(start_at_from=0, start_at_to=from_ts - 1)
+    result = await offer_repo.filter_offers(filters)
+    assert created.id not in [o.id for o in result.items]
+
+
+# ========== Недостающие сортировки ==========
+
+async def test_filter_offers_sorting_by_status(offer_repo, test_offer_create_data):
+    """Сортировка по статусу оффера (метке)"""
+    base = test_offer_create_data
+    # Создаём офферы с разными статусами
+    statuses = [OfferStatus.PENDING, OfferStatus.APPROVED_MNG, OfferStatus.REJECTED_MNG]
+    created_ids = []
+    for st in statuses:
+        data = base.model_copy(deep=True)
+        data.status = st
+        offer = await offer_repo.create_offer(data)
+        created_ids.append(offer.id)
+
+    # Сортировка ASC (по алфавиту названий статусов)
+    filters = OfferFilter(sort_by="status", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    statuses_asc = [o.status for o in result.items if o.id in created_ids]
+    # Ожидаем: APPROVED_MNG, PENDING, REJECTED_MNG (алфавитный порядок)
+    expected = sorted(statuses)
+    assert statuses_asc == expected
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    statuses_desc = [o.status for o in result.items if o.id in created_ids]
+    assert statuses_desc == sorted(statuses, reverse=True)
+
+
+async def test_filter_offers_sorting_by_created_at(offer_repo, test_offer_create_data):
+    """Сортировка по дате создания (created_at)"""
+    # Создадим несколько офферов с небольшими задержками, чтобы created_at отличался
+    base = test_offer_create_data
+    created_times = []
+    for i in range(3):
+        offer = await offer_repo.create_offer(base)
+        created_times.append((offer.id, offer.created_at))
+        # небольшая пауза, чтобы timestamp гарантированно увеличился
+        import asyncio
+        await asyncio.sleep(0.1)
+
+    # Сортировка ASC
+    filters = OfferFilter(sort_by="created_at", sort_order="asc")
+    result = await offer_repo.filter_offers(filters)
+    result_ids = [o.id for o in result.items if o.id in [t[0] for t in created_times]]
+    expected_ids_asc = [t[0] for t in sorted(created_times, key=lambda x: x[1])]
+    assert result_ids == expected_ids_asc
+
+    # DESC
+    filters.sort_order = "desc"
+    result = await offer_repo.filter_offers(filters)
+    result_ids_desc = [o.id for o in result.items if o.id in [t[0] for t in created_times]]
+    expected_ids_desc = [t[0] for t in sorted(created_times, key=lambda x: x[1], reverse=True)]
+    assert result_ids_desc == expected_ids_desc
+
+
+# ========== Комбинация фильтров ==========
+
+async def test_filter_offers_combined_status_and_salary(offer_repo, test_offer_create_data):
+    """Комбинация фильтров: статус оффера + диапазон зарплаты"""
+    base = test_offer_create_data
+    # Создаём APPROVED_MNG с зарплатой 100000
+    data1 = base.model_copy(deep=True)
+    data1.status = OfferStatus.APPROVED_MNG
+    data1.salary = 100000
+    offer1 = await offer_repo.create_offer(data1)
+
+    # Создаём APPROVED_MNG с зарплатой 200000
+    data2 = base.model_copy(deep=True)
+    data2.status = OfferStatus.APPROVED_MNG
+    data2.salary = 200000
+    offer2 = await offer_repo.create_offer(data2)
+
+    # Создаём PENDING с зарплатой 150000 (не должен попасть)
+    data3 = base.model_copy(deep=True)
+    data3.status = OfferStatus.PENDING
+    data3.salary = 150000
+    await offer_repo.create_offer(data3)
+
+    # Фильтр: статус APPROVED_MNG и зарплата от 80000 до 150000
+    filters = OfferFilter(
+        status=OfferStatus.APPROVED_MNG,
+        salary_from=80000,
+        salary_to=150000
+    )
+    result = await offer_repo.filter_offers(filters)
+    assert result.total == 1
+    assert result.items[0].id == offer1.id
+    assert offer2.id not in [o.id for o in result.items]
