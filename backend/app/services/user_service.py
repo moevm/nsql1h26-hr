@@ -1,4 +1,5 @@
 from typing import Optional
+from app.core.security import get_password_hash
 from app.repositories.user_repo import UserRepository
 from app.models.user import UserDB, UserFilter, UserCreate
 
@@ -15,8 +16,8 @@ class UserService:
 
     async def create_user(self, user_data: UserCreate) -> UserDB:
         user_data_raw = user_data.model_dump()
-        # TODO: add hashing
-        user_data_raw["password_hash"] = user_data.password
+        hashed = get_password_hash(user_data.password)
+        user_data_raw["password_hash"] = hashed
         user_data_raw.pop("password")
         return await self.user_repo.create_user(user_data_raw)
 
