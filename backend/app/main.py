@@ -14,6 +14,7 @@ from app.api.v2.interviews.routes import router as interview_router
 from app.api.v2.offers.routes import router as offer_router
 from app.api.v2.auth.routes import router as auth_router
 from app.api.v2.users.routes import router as user_router
+from app.api.v2.admin.routes import router as admin_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -52,6 +53,8 @@ app.include_router(
 app.include_router(auth_router, prefix=f"{settings.api_prefix}/auth", tags=["Auth"])
 
 app.include_router(user_router, prefix=f"{settings.api_prefix}/users", tags=["Users"])
+
+app.include_router(admin_router, prefix=f"{settings.api_prefix}/admin", tags=["Admin"])
 
 
 @app.exception_handler(AppError)

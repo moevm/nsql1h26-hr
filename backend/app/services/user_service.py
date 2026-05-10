@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from app.core.security import get_password_hash
 from app.repositories.user_repo import UserRepository
 from app.models.user import UserDB, UserFilter, UserCreate
@@ -13,6 +13,9 @@ class UserService:
 
     async def get_user_by_id(self, user_id: str) -> Optional[UserDB]:
         return await self.user_repo.get_user_by_id(user_id)
+
+    async def get_users(self) -> List[UserDB]:
+        return await self.user_repo.get_users()
 
     async def create_user(self, user_data: UserCreate) -> UserDB:
         user_data_raw = user_data.model_dump()

@@ -192,6 +192,7 @@ async def test_patch_candidate_ok(
         email="candidate_b@gmail.com",
         vacancy_id=vacancy2.id,
         status="OFFER",
+        resume_url="https://yahoo.com",
     )
     got_candidate = await candidate_service.patch_candidate(candidate_id, patch)
     assert got_candidate is not None
@@ -200,7 +201,7 @@ async def test_patch_candidate_ok(
     assert got_candidate.email == patch.email
     assert got_candidate.phone == candidate.phone
     assert got_candidate.status == "OFFER"
-    assert got_candidate.resume_url == candidate.resume_url
+    assert got_candidate.resume_url == patch.resume_url
     assert got_candidate.vacancy_id == vacancy2.id
     assert got_candidate.test_task_id == candidate.test_task_id
 

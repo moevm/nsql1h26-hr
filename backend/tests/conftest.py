@@ -21,6 +21,7 @@ from app.services.vacancy_service import VacancyService
 from app.services.candidate_service import CandidateService
 from app.services.interview_service import InterviewService
 from app.services.offer_service import OfferService
+from app.services.admin_service import AdminService
 
 # Базовые фикстуры
 
@@ -203,3 +204,17 @@ async def interview_service(interview_repo, candidate_repo, user_repo):
 @pytest.fixture
 async def offer_service(offer_repo, candidate_repo, vacancy_repo):
     return OfferService(offer_repo, candidate_repo, vacancy_repo)
+
+
+@pytest.fixture
+async def admin_service(
+    user_repo, vacancy_repo, test_task_repo, candidate_repo, interview_repo, offer_repo
+):
+    return AdminService(
+        user_repo,
+        vacancy_repo,
+        test_task_repo,
+        candidate_repo,
+        interview_repo,
+        offer_repo,
+    )

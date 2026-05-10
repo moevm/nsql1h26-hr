@@ -87,6 +87,8 @@ class CandidateService:
             if not test_task:
                 raise AppError("Test task not found", status.HTTP_404_NOT_FOUND)
         candidate_data = candidate_patch.model_dump(exclude_unset=True)
+        if candidate_patch.resume_url:
+            candidate_data["resume_url"] = str(candidate_patch.resume_url)
         candidate = await self.candidate_repo.patch_candidate(
             candidate_id, candidate_data
         )
