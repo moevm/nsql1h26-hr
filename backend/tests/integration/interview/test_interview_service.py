@@ -12,56 +12,9 @@ from app.models.interview import (
 from app.models.helpers import SortOrder
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate
-from app.services.interview_service import InterviewService
-from app.services.candidate_service import CandidateService
-from app.repositories.interview_repo import InterviewRepository
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.candidate_repo import CandidateRepository
-from app.repositories.vacancy_repo import VacancyRepository
-from app.repositories.user_repo import UserRepository
 from app.core.exceptions import AppError
 
 from app.models.user import UserCreate, Role
-from app.services.user_service import UserService
-
-
-@pytest.fixture
-async def user_service(user_repo):
-    return UserService(user_repo)
-
-
-@pytest.fixture
-async def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def candidate_repo(neo4j_driver):
-    return CandidateRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def interview_repo(neo4j_driver):
-    return InterviewRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def interview_service(interview_repo, candidate_repo, user_repo):
-    return InterviewService(interview_repo, candidate_repo, user_repo)
-
-
-@pytest.fixture
-def candidate_service(neo4j_driver):
-    return CandidateService(
-        TestTaskRepository(neo4j_driver),
-        VacancyRepository(neo4j_driver),
-        CandidateRepository(neo4j_driver),
-    )
 
 
 @pytest.fixture
@@ -744,9 +697,6 @@ async def test_patch_interview_to_passed(
 
 async def test_filter_by_date_range(interview_service):
     result = await interview_service.filter_interviews(
-        InterviewFilter(
-            scheduled_at_from=1000,
-            scheduled_at_to=2000
-        )
+        InterviewFilter(scheduled_at_from=1000, scheduled_at_to=2000)
     )
     assert all(1000 <= i.scheduled_at <= 2000 for i in result.items)

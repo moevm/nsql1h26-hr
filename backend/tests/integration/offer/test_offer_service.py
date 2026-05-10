@@ -6,61 +6,7 @@ from app.models.offer import OfferCreate, OfferStatus, OfferFilter, OfferPatch
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate, VacancyStatus
 from app.models.user import UserCreate, Role
-from app.services.offer_service import OfferService
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.offer_repo import OfferRepository
-from app.repositories.candidate_repo import CandidateRepository
-from app.repositories.vacancy_repo import VacancyRepository
-from app.repositories.user_repo import UserRepository
-from app.services.user_service import UserService
-from app.services.candidate_service import CandidateService
-from app.services.vacancy_service import VacancyService
 from app.core.exceptions import AppError
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def candidate_repo(neo4j_driver):
-    return CandidateRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def test_task_repo(neo4j_driver):
-    return TestTaskRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def offer_repo(neo4j_driver):
-    return OfferRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def user_service(user_repo):
-    return UserService(user_repo)
-
-
-@pytest.fixture
-async def candidate_service(test_task_repo, candidate_repo, vacancy_repo):
-    return CandidateService(test_task_repo, vacancy_repo, candidate_repo)
-
-
-@pytest.fixture
-async def vacancy_service(vacancy_repo):
-    return VacancyService(vacancy_repo)
-
-
-@pytest.fixture
-async def offer_service(offer_repo, candidate_repo, vacancy_repo):
-    return OfferService(offer_repo, candidate_repo, vacancy_repo)
 
 
 @pytest.fixture
@@ -70,7 +16,7 @@ async def test_user(user_service):
             email=f"hr_{uuid4()}@example.com",
             full_name="Test HR",
             password="hash123456",
-            role=Role.HR
+            role=Role.HR,
         )
     )
     return user
@@ -118,9 +64,13 @@ async def test_create_offer_ok(offer_service, test_offer_create_data):
     assert offer.id is not None
 
 
-async def test_patch_offer_hired(offer_service, candidate_service, vacancy_service, test_offer_create_data):
+async def test_patch_offer_hired(
+    offer_service, candidate_service, vacancy_service, test_offer_create_data
+):
     offer = await offer_service.create_offer(test_offer_create_data)
-    patched_offer = await offer_service.patch_offer(offer.id, OfferPatch(status=OfferStatus.APPROVED_CND))
+    patched_offer = await offer_service.patch_offer(
+        offer.id, OfferPatch(status=OfferStatus.APPROVED_CND)
+    )
     assert patched_offer.status == OfferStatus.APPROVED_CND
     vacancy = await vacancy_service.get_vacancy_by_id(offer.vacancy_id)
     assert vacancy.status == VacancyStatus.CLOSED
@@ -128,17 +78,25 @@ async def test_patch_offer_hired(offer_service, candidate_service, vacancy_servi
     assert candidate.status == CandidateStatus.HIRED
 
 
-async def test_patch_offer_rejected_cnf(offer_service, candidate_service, vacancy_service, test_offer_create_data):
+async def test_patch_offer_rejected_cnf(
+    offer_service, candidate_service, vacancy_service, test_offer_create_data
+):
     offer = await offer_service.create_offer(test_offer_create_data)
-    patched_offer = await offer_service.patch_offer(offer.id, OfferPatch(status=OfferStatus.REJECTED_CNF))
+    patched_offer = await offer_service.patch_offer(
+        offer.id, OfferPatch(status=OfferStatus.REJECTED_CNF)
+    )
     assert patched_offer.status == OfferStatus.REJECTED_CNF
     candidate = await candidate_service.get_candidate_by_id(offer.candidate_id)
     assert candidate.status == CandidateStatus.REJECTED
 
 
-async def test_patch_offer_rejected_mng(offer_service, candidate_service, vacancy_service, test_offer_create_data):
+async def test_patch_offer_rejected_mng(
+    offer_service, candidate_service, vacancy_service, test_offer_create_data
+):
     offer = await offer_service.create_offer(test_offer_create_data)
-    patched_offer = await offer_service.patch_offer(offer.id, OfferPatch(status=OfferStatus.REJECTED_MNG))
+    patched_offer = await offer_service.patch_offer(
+        offer.id, OfferPatch(status=OfferStatus.REJECTED_MNG)
+    )
     assert patched_offer.status == OfferStatus.REJECTED_MNG
     candidate = await candidate_service.get_candidate_by_id(offer.candidate_id)
     assert candidate.status == CandidateStatus.REJECTED

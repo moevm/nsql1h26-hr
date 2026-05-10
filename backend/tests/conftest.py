@@ -15,6 +15,13 @@ from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.interview_repo import InterviewRepository
 from app.repositories.offer_repo import OfferRepository
 
+from app.services.user_service import UserService
+from app.services.test_task_service import TestTaskService
+from app.services.vacancy_service import VacancyService
+from app.services.candidate_service import CandidateService
+from app.services.interview_service import InterviewService
+from app.services.offer_service import OfferService
+
 # Базовые фикстуры
 
 
@@ -157,3 +164,42 @@ def vacancy_repo(neo4j_driver):
 @pytest.fixture
 async def offer_repo(neo4j_driver):
     return OfferRepository(neo4j_driver)
+
+
+# Service фикстуры
+
+
+@pytest.fixture
+async def user_service(user_repo):
+    return UserService(user_repo)
+
+
+@pytest.fixture
+def vacancy_service(neo4j_driver):
+    return VacancyService(VacancyRepository(neo4j_driver))
+
+
+@pytest.fixture
+def test_task_service(neo4j_driver):
+    return TestTaskService(
+        TestTaskRepository(neo4j_driver), VacancyRepository(neo4j_driver)
+    )
+
+
+@pytest.fixture
+def candidate_service(neo4j_driver):
+    return CandidateService(
+        TestTaskRepository(neo4j_driver),
+        VacancyRepository(neo4j_driver),
+        CandidateRepository(neo4j_driver),
+    )
+
+
+@pytest.fixture
+async def interview_service(interview_repo, candidate_repo, user_repo):
+    return InterviewService(interview_repo, candidate_repo, user_repo)
+
+
+@pytest.fixture
+async def offer_service(offer_repo, candidate_repo, vacancy_repo):
+    return OfferService(offer_repo, candidate_repo, vacancy_repo)

@@ -10,34 +10,7 @@ from app.models.candidate import (
     CandidateFilterResponse,
     CandidateStatus,
 )
-from app.services.test_task_service import TestTaskService
-from app.services.vacancy_service import VacancyService
-from app.services.candidate_service import CandidateService
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.vacancy_repo import VacancyRepository
-from app.repositories.candidate_repo import CandidateRepository
 from app.core.exceptions import AppError
-
-
-@pytest.fixture
-def vacancy_service(neo4j_driver):
-    return VacancyService(VacancyRepository(neo4j_driver))
-
-
-@pytest.fixture
-def test_task_service(neo4j_driver):
-    return TestTaskService(
-        TestTaskRepository(neo4j_driver), VacancyRepository(neo4j_driver)
-    )
-
-
-@pytest.fixture
-def candidate_service(neo4j_driver):
-    return CandidateService(
-        TestTaskRepository(neo4j_driver),
-        VacancyRepository(neo4j_driver),
-        CandidateRepository(neo4j_driver),
-    )
 
 
 async def test_create_candidate_ok(

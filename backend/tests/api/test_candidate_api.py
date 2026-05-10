@@ -30,8 +30,8 @@ async def test_create_candidate(hr_client):
             "status": "NEW",
             "vacancy_id": vacancy_id,
             "test_task_id": test_task_id,
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
     assert response.status_code == 201
     data = response.json()
@@ -74,12 +74,11 @@ async def test_get_candidate_by_id_ok(hr_client):
             "status": "NEW",
             "vacancy_id": vacancy_id,
             "test_task_id": test_task_id,
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
     data = response.json()
-    response = await hr_client.get(
-        f"/candidates/{data["id"]}")
+    response = await hr_client.get(f"/candidates/{data["id"]}")
     assert response.status_code == 200
     got = response.json()
     assert got == data
@@ -97,11 +96,10 @@ async def test_get_candidate_bad_id(hr_client):
             "email": email,
             "phone": phone,
             "status": "NEW",
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
-    response = await hr_client.get(
-        f"/candidates/{uuid.uuid4()}")
+    response = await hr_client.get(f"/candidates/{uuid.uuid4()}")
     assert response.status_code == 404
 
 
@@ -134,16 +132,13 @@ async def test_patch_candidate(hr_client):
             "status": "NEW",
             "vacancy_id": vacancy_id,
             "test_task_id": test_task_id,
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
     candidate_id = response.json()["id"]
     full_name = "AAAAAAA"
     response = await hr_client.patch(
-        f"/candidates/{candidate_id}",
-        json={
-            "full_name": full_name
-        }
+        f"/candidates/{candidate_id}", json={"full_name": full_name}
     )
     assert response.status_code == 200
     data = response.json()
@@ -186,14 +181,11 @@ async def test_patch_candidate_empty(hr_client):
             "status": "NEW",
             "vacancy_id": vacancy_id,
             "test_task_id": test_task_id,
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
     candidate_id = response.json()["id"]
-    response = await hr_client.patch(
-        f"/candidates/{candidate_id}",
-        json={}
-    )
+    response = await hr_client.patch(f"/candidates/{candidate_id}", json={})
     assert response.status_code == 200
     data = response.json()
     assert data["id"] is not None

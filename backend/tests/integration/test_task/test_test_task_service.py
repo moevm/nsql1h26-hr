@@ -1,23 +1,7 @@
 import pytest
 from app.models.vacancy import VacancyCreate
 from app.models.test_task import TestTaskCreate, TestTasksFilter, TestTaskPatch
-from app.services.test_task_service import TestTaskService
-from app.services.vacancy_service import VacancyService
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.vacancy_repo import VacancyRepository
 from app.core.exceptions import AppError
-
-
-@pytest.fixture
-def vacancy_service(neo4j_driver):
-    return VacancyService(VacancyRepository(neo4j_driver))
-
-
-@pytest.fixture
-def test_task_service(neo4j_driver):
-    return TestTaskService(
-        TestTaskRepository(neo4j_driver), VacancyRepository(neo4j_driver)
-    )
 
 
 async def test_create_test_task_ok(test_task_service, vacancy_service):
@@ -135,6 +119,4 @@ async def test_patch_test_tesk_bad_id(test_task_service, vacancy_service):
     created_test_task = await test_task_service.create_test_task(test_task)
     patch_test_task = TestTaskPatch()
     with pytest.raises(AppError):
-        await test_task_service.patch_test_task(
-            vacancy.id, patch_test_task
-        )
+        await test_task_service.patch_test_task(vacancy.id, patch_test_task)

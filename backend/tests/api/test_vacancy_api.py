@@ -48,8 +48,7 @@ async def test_patch_vacancy_ok(hr_client):
     vacancy_id = str(data["id"])
 
     response = await hr_client.patch(
-        f"/vacancies/{vacancy_id}", json={"description": "Update",
-                                          "status": "CLOSED"}
+        f"/vacancies/{vacancy_id}", json={"description": "Update", "status": "CLOSED"}
     )
     assert response.status_code == 200
     got_data = response.json()
@@ -71,8 +70,8 @@ async def test_patch_vacancy_date(hr_client):
     new_date = datetime.now(timezone.utc)
 
     response = await hr_client.patch(
-        f"/vacancies/{vacancy_id}", json={"created_at": str(new_date),
-                                          "status": "CLOSED"}
+        f"/vacancies/{vacancy_id}",
+        json={"created_at": str(new_date), "status": "CLOSED"},
     )
     assert response.status_code == 200
     got_data = response.json()
@@ -86,8 +85,7 @@ async def test_patch_vacancy_not_found(hr_client):
     vacancy_id = str(uuid.uuid4())
 
     response = await hr_client.patch(
-        f"/vacancies/{vacancy_id}", json={"description": "Update",
-                                          "status": "CLOSED"}
+        f"/vacancies/{vacancy_id}", json={"description": "Update", "status": "CLOSED"}
     )
     assert response.status_code == 404
 
@@ -102,8 +100,8 @@ async def test_patch_vacancy_invalid_params(hr_client):
     vacancy_id = str(data["id"])
 
     response = await hr_client.patch(
-        f"/vacancies/{vacancy_id}", json={"closed_at": int(datetime.now().timestamp()),
-                                          "status": "OPEN"}
+        f"/vacancies/{vacancy_id}",
+        json={"closed_at": int(datetime.now().timestamp()), "status": "OPEN"},
     )
     assert response.status_code == 400
 
@@ -138,17 +136,23 @@ async def test_filter_vacancies_ok(hr_client):
 
     # sorting
     response = await hr_client.get(
-        "/vacancies",
-        params={"sort_by": "title", "sort_order": "desc"}
+        "/vacancies", params={"sort_by": "title", "sort_order": "desc"}
     )
     assert response.status_code == 200
     data = response.json()
 
-    titles = [item["title"] for item in data["items"] if item["title"] in ["Python Developer", "Frontend Developer"]]
+    titles = [
+        item["title"]
+        for item in data["items"]
+        if item["title"] in ["Python Developer", "Frontend Developer"]
+    ]
     assert titles == ["Python Developer", "Frontend Developer"]
 
+
 async def test_filter_vacancies_empty_result(hr_client):
-    response = await hr_client.get("/vacancies", params={"title": "NonExistentVacancyName"})
+    response = await hr_client.get(
+        "/vacancies", params={"title": "NonExistentVacancyName"}
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 0
@@ -156,11 +160,16 @@ async def test_filter_vacancies_empty_result(hr_client):
 
 
 async def test_filter_vacancies_datetime(hr_client):
-    v1_data = {"title": "Python Developer",
-               "description": "Backend focus",
-               "created_at": datetime(2023, 10, 25, 14, 30).timestamp()}
-    v2_data = {"title": "Frontend Developer", "description": "React focus",
-               "created_at": datetime(2024, 10, 25, 14, 30).timestamp()}
+    v1_data = {
+        "title": "Python Developer",
+        "description": "Backend focus",
+        "created_at": datetime(2023, 10, 25, 14, 30).timestamp(),
+    }
+    v2_data = {
+        "title": "Frontend Developer",
+        "description": "React focus",
+        "created_at": datetime(2024, 10, 25, 14, 30).timestamp(),
+    }
     resp1 = await hr_client.post("/vacancies", json=v1_data)
     await hr_client.post("/vacancies", json=v2_data)
     vacancy1 = resp1.json()
@@ -168,9 +177,9 @@ async def test_filter_vacancies_datetime(hr_client):
     date1 = datetime(2023, 6, 15, 10, 10).timestamp()
     date2 = datetime(2024, 10, 14, 14, 14).timestamp()
 
-    response = await hr_client.get("/vacancies",
-                                      params={"created_at_from": date1,
-                                              "created_at_to": date2})
+    response = await hr_client.get(
+        "/vacancies", params={"created_at_from": date1, "created_at_to": date2}
+    )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1

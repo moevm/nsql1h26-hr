@@ -3,18 +3,6 @@ import uuid
 from datetime import datetime, UTC
 from app.models.user import UserCreate, Role
 from app.models.offer import OfferStatus
-from app.services.user_service import UserService
-from app.repositories.user_repo import UserRepository
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def user_service(user_repo):
-    return UserService(user_repo)
 
 
 async def test_patch_offer(hr_client, manager_client, user_service):
@@ -57,17 +45,14 @@ async def test_patch_offer(hr_client, manager_client, user_service):
             "status": "NEW",
             "vacancy_id": vacancy_id,
             "test_task_id": test_task_id,
-            "resume_url": resume_url
-        }
+            "resume_url": resume_url,
+        },
     )
     assert response.status_code == 201
     candidate_id = response.json()["id"]
 
     response = await hr_client.patch(
-        f"/candidates/{candidate_id}",
-        json={
-            "status": "INTERVIEW_PASSED"
-        }
+        f"/candidates/{candidate_id}", json={"status": "INTERVIEW_PASSED"}
     )
 
     response = await hr_client.post(
@@ -77,17 +62,14 @@ async def test_patch_offer(hr_client, manager_client, user_service):
             "vacancy_id": str(vacancy_id),
             "created_by": str(hr_id),
             "salary": 100500,
-            "start_at": int(datetime.now(UTC).timestamp())
-        }
+            "start_at": int(datetime.now(UTC).timestamp()),
+        },
     )
     assert response.status_code == 201
 
     offer_id = response.json()["id"]
     response = await manager_client.patch(
-        f"/offers/{offer_id}",
-        json={
-            "status": OfferStatus.APPROVED_CND
-        }
+        f"/offers/{offer_id}", json={"status": OfferStatus.APPROVED_CND}
     )
     assert response.status_code == 200
     data = response.json()

@@ -2,18 +2,6 @@ import pytest
 import uuid
 from datetime import datetime, timedelta, timezone
 from app.models.user import UserCreate, Role
-from app.services.user_service import UserService
-from app.repositories.user_repo import UserRepository
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def user_service(user_repo):
-    return UserService(user_repo)
 
 
 @pytest.fixture
@@ -29,7 +17,7 @@ async def test_tech_spec(user_service):
     return user
 
 
-async def test_create_interview_ok(hr_client,  user_service):
+async def test_create_interview_ok(hr_client, user_service):
     tech_spec = await user_service.create_user(
         UserCreate(
             email="tech_api@test.com",
