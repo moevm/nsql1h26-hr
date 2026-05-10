@@ -160,3 +160,31 @@ class UserRepository:
         result = await self.driver.execute_query(query, user_id=user_id)
         deleted = result.records[0]["deleted"] if result.records else 0
         return deleted > 0
+
+    async def restore_user(self, user: UserDB) -> UserDB:
+        query = f"""
+        CREATE (u:User:{user.role} {{
+            id: $id,
+            email: $email,
+            full_name: $full_name,
+            password_hash: $password_hash,
+            role: $role
+        }})
+        RETURN u.id as id, u.email as email, u.full_name as full_name, u.role as role, u.password_hash as password_hash
+        """
+        result = await self.driver.execute_query(
+            query,
+            id=str(user.id),
+            email=str(user.email),
+            full_name=user.full_name,
+            password_hash=user.password_hash,
+            role=user.role,
+        )
+        record = result.records[0]
+        return UserDB(
+            id=record["id"],
+            email=record["email"],
+            full_name=record["full_name"],
+            password_hash=record["password_hash"],
+            role=record["role"],
+        )

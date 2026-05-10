@@ -1,6 +1,6 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.vacancy import VacancyCreate, VacancyFilter
+from app.models.vacancy import VacancyCreate, VacancyFilter, VacancyResponse
 from datetime import datetime, timezone
 
 
@@ -130,3 +130,26 @@ class VacancyRepository:
                 "total": records[0]["total_count"],
                 "items": [r["vacancy_data"] for r in records],
             }
+
+    async def restore_vacancy(self, vacancy: VacancyResponse) -> dict:
+        async with self.driver.session() as session:
+            result = await session.run(
+                f"""
+                CREATE (v:Vacancy:{vacancy.status} {{
+                    id: $id,
+                    title: $title,
+                    description: $description,
+                    created_at: $created_at
+                }})
+                RETURN v {{
+            .*,
+            status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
+                }} AS vacancy_data
+                """,
+                id=str(vacancy.id),
+                title=vacancy.title,
+                description=vacancy.description,
+                created_at=vacancy.created_at,
+            )
+            record = await result.single()
+            return record["vacancy_data"] if record else None

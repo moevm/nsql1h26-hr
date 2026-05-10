@@ -204,3 +204,38 @@ class OfferRepository:
                 else []
             )
             return OfferFilterResponse(total=record["total_count"], items=items)
+
+    async def restore_offer(self, offer: OfferResponse) -> OfferResponse:
+        async with self.driver.session() as session:
+            result = await session.run(
+                f"""
+                MATCH (u:User {{id: $created_by}})
+                MATCH (c:Candidate {{id: $candidate_id}})
+                MATCH (v:Vacancy {{id: $vacancy_id}})
+                CREATE (o:Offer:{offer.status} {{
+                    id: $id,
+                    salary: $salary,
+                    start_at: $start_at,
+                    created_at: $created_at
+                }})
+                CREATE (u)-[:CREATES]->(o)
+                CREATE (o)-[:OFFERED]->(c)
+                CREATE (o)-[:CLOSES]->(v)
+                RETURN o {{
+                    .*,
+                    status: [label IN labels(o) WHERE label in [{self.statuses}]][0],
+                    candidate_id: c.id,
+                    vacancy_id: v.id,
+                    created_by: u.id
+                }} AS offer_data
+                """,
+                id=str(offer.id),
+                created_by=str(offer.created_by),
+                candidate_id=str(offer.candidate_id),
+                vacancy_id=str(offer.vacancy_id),
+                salary=offer.salary,
+                start_at=offer.start_at,
+                created_at=offer.created_at
+            )
+            record = await result.single()
+            return OfferResponse(**record["offer_data"]) if record else None

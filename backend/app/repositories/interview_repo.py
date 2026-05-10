@@ -30,7 +30,6 @@ class InterviewRepository:
                 })
                 CREATE (c)-[:ASSIGNED_FOR]->(i)
                 CREATE (u)-[:INTERVIEWING]->(i)
-                SET c.status = 'INTERVIEW'
                 RETURN i {
                     .*,
                     candidate_id: c.id,
@@ -177,3 +176,45 @@ class InterviewRepository:
                 else []
             )
             return InterviewFilterResponse(total=record["total_count"], items=items)
+
+    async def restore_interview(
+        self, interview: InterviewResponse
+    ) -> InterviewResponse:
+        async with self.driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (c:Candidate {id: $candidate_id})
+                MATCH (u:User:TECH_SPEC {id: $tech_spec_id})
+                CREATE (i:Interview {
+                    id: $id,
+                    scheduled_at: $scheduled_at,
+                    zoom_url: $zoom_url,
+                    feedback: $feedback,
+                    result: $result
+                })
+                CREATE (c)-[:ASSIGNED_FOR]->(i)
+                CREATE (u)-[:INTERVIEWING]->(i)
+                RETURN i {
+                    .*,
+                    candidate_id: c.id,
+                    tech_spec_id: u.id
+                } AS interview_data
+                """,
+                id=str(interview.id),
+                candidate_id=str(interview.candidate_id),
+                tech_spec_id=str(interview.tech_spec_id),
+                scheduled_at=interview.scheduled_at,
+                zoom_url=(
+                    str(interview.zoom_url) if interview.zoom_url else None
+                ),
+                feedback=interview.feedback,
+                result=(
+                    interview.result.value
+                    if interview.result
+                    else "AWAIT_INTERVIEW"
+                ),
+            )
+            record = await result.single()
+            if not record:
+                return None
+            return InterviewResponse(**record["interview_data"])

@@ -1,7 +1,12 @@
 from neo4j import AsyncDriver
 from uuid import UUID
 
-from app.models.test_task import TestTaskCreate, TestTasksFilter, TestTaskSort
+from app.models.test_task import (
+    TestTaskCreate,
+    TestTasksFilter,
+    TestTaskSort,
+    TestTaskResponse,
+)
 
 
 class TestTaskRepository:
@@ -104,3 +109,23 @@ class TestTaskRepository:
                 return {"total": 0, "items": []}
 
             return {"total": record["total_count"], "items": record["test_task_data"]}
+
+    async def restore_test_task(self, test_task: TestTaskResponse) -> dict:
+        async with self.driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (v:Vacancy{id: $vacancy_id})
+                CREATE (t:TestTask{
+                    id: $id,
+                    title: $title,
+                    test_task_url: $url
+                })-[:TEST_FOR]->(v)
+                RETURN t { .*, vacancy_id: v.id } AS test_task_data
+                """,
+                id=str(test_task.id),
+                vacancy_id=str(test_task.vacancy_id),
+                title=test_task.title,
+                url=str(test_task.test_task_url),
+            )
+            record = await result.single()
+            return record["test_task_data"] if record else None

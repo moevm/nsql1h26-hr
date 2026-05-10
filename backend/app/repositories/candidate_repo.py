@@ -5,6 +5,7 @@ from app.models.candidate import (
     CandidateCreate,
     CandidateSort,
     CandidateFilter,
+    CandidateResponse
 )
 
 
@@ -272,3 +273,69 @@ class CandidateRepository:
                 else []
             )
             return {"total": record["total_count"], "items": items}
+
+    async def restore_candidate(self, candidate: CandidateResponse) -> dict:
+        async with self.driver.session() as session:
+            params = {
+                "full_name": candidate.full_name,
+                "email": candidate.email,
+                "phone": candidate.phone,
+                "id": str(candidate.id)
+            }
+
+            create_query = f"""
+                CREATE (c:Candidate:{candidate.status} {{
+                    id: $id,
+                    full_name: $full_name,
+                    email: $email,
+                    phone: $phone
+            """
+
+            if candidate.resume_url:
+                params["resume_url"] = str(candidate.resume_url)
+                create_query += ", resume_url: $resume_url"
+
+            create_query += "})"
+
+            if candidate.vacancy_id:
+                params["vacancy_id"] = str(candidate.vacancy_id)
+                create_query = (
+                    "MATCH (v:Vacancy {id: $vacancy_id}) "
+                    + create_query
+                    + " CREATE (c)-[:APPLIES]->(v) "
+                )
+
+            if candidate.test_task_id:
+                params["test_task_id"] = str(candidate.test_task_id)
+                create_query = (
+                    "MATCH (t:TestTask {id: $test_task_id}) "
+                    + create_query
+                    + " CREATE (c)-[:COMPLETES]->(t) "
+                )
+
+            create_query += " RETURN c.id as id"
+
+            result = await session.run(create_query, **params)
+            record = await result.single()
+            if not record:
+                return None
+
+            candidate_id = record["id"]
+
+            get_query = f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {{
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
+            """
+            result = await session.run(get_query, candidate_id=candidate_id)
+            record = await result.single()
+            if record:
+                data = dict(record["candidate_data"])
+                return {k: v for k, v in data.items() if v is not None}
+            return None

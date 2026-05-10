@@ -9,6 +9,14 @@ from app.models.offer import OfferCreate, OfferStatus
 
 
 @pytest.fixture
+async def clear_db(neo4j_driver):
+    async def _clear():
+        async with neo4j_driver.session() as session:
+            await session.run("MATCH (n) DETACH DELETE n")
+    return _clear
+
+
+@pytest.fixture
 async def tech_spec_user(user_service):
     user = await user_service.create_user(
         UserCreate(
@@ -96,3 +104,68 @@ async def test_backup(
 
     assert len(backup.offers) == 1
     assert backup.offers[0] == offer
+
+async def test_restore(
+    tech_spec_user,
+    admin_service,
+    vacancy_service,
+    test_task_service,
+    candidate_service,
+    interview_service,
+    offer_service,
+    clear_db
+):
+    vacancy = await vacancy_service.create_vacancy(
+        VacancyCreate(title="Test vacancy", description="Test Vacancy Description")
+    )
+    test_task = await test_task_service.create_test_task(
+        TestTaskCreate(
+            title="test task 1",
+            test_task_url="https://google.com",
+            vacancy_id=vacancy.id,
+        )
+    )
+    candidate = await candidate_service.create_candidate(
+        CandidateCreate(
+            full_name="Candidate A",
+            email="candidate@gmail.com",
+            phone="+79638527411",
+            resume_url="https://google.com",
+            status=CandidateStatus.NEW,
+            vacancy_id=vacancy.id,
+            test_task_id=test_task.id,
+        )
+    )
+    interview = await interview_service.create_interview(
+        InterviewCreate(
+            candidate_id=candidate.id,
+            tech_spec_id=tech_spec_user.id,
+            scheduled_at=datetime.now(timezone.utc) + timedelta(days=1),
+            zoom_url="https://zoom.us/test",
+            feedback=None,
+            result=InterviewResult.AWAIT_INTERVIEW,
+        )
+    )
+    interview = await interview_service.patch_interview(
+        interview.id,
+        InterviewPatch(result=InterviewResult.INTERVIEW_PASSED, feedback="good"),
+    )
+    offer = await offer_service.create_offer(
+        OfferCreate(
+            candidate_id=candidate.id,
+            vacancy_id=vacancy.id,
+            created_by=tech_spec_user.id,
+            salary=100000,
+            start_at=datetime.now(timezone.utc) + timedelta(days=30),
+            status=OfferStatus.PENDING,
+        )
+    )
+    candidate = await candidate_service.get_candidate_by_id(candidate.id)
+
+    expected_backup = await admin_service.backup()
+    await clear_db()
+    await admin_service.restore(expected_backup)
+    actual_backup = await admin_service.backup()
+
+    assert actual_backup == expected_backup
+

@@ -39,3 +39,13 @@ async def backup(
     _: dict = Depends(require_role("ADMIN")),
 ):
     return await admin_service.backup()
+
+
+@router.post("/restore", status_code=status.HTTP_200_OK)
+async def restore(
+    backup: SystemBackup,
+    admin_service: AdminService = Depends(get_admin_service),
+    _: dict = Depends(require_role("ADMIN")),
+):
+    await admin_service.restore(backup)
+    return {"status": "restored"}

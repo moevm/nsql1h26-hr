@@ -31,6 +31,7 @@ class OfferResponse(BaseModel):
     created_by: UUID
     salary: NonNegativeInt
     start_at: UnixTimestamp
+    created_at: UnixTimestamp
     status: OfferStatus = OfferStatus.PENDING
 
     model_config = ConfigDict(from_attributes=True)

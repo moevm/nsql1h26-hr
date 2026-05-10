@@ -52,3 +52,17 @@ class AdminService:
             interviews=interviews,
             offers=offers,
         )
+
+    async def restore(self, data_backup: SystemBackup) -> None:
+        for user in data_backup.users:
+            await self.user_repo.restore_user(user)
+        for vacancy in data_backup.vacancies:
+            await self.vacancy_repo.restore_vacancy(vacancy)
+        for test_task in data_backup.test_tasks:
+            await self.test_task_repo.restore_test_task(test_task)
+        for candidate in data_backup.candidates:
+            await self.candidate_repo.restore_candidate(candidate)
+        for interview in data_backup.interviews:
+            await self.interview_repo.restore_interview(interview)
+        for offer in data_backup.offers:
+            await self.offer_repo.restore_offer(offer)
