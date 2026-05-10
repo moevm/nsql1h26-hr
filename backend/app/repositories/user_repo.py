@@ -1,6 +1,6 @@
 from neo4j import AsyncDriver
 from uuid import uuid4
-from typing import Optional
+from typing import Optional, List
 from app.models.user import UserDB, UserFilter, UserCreate
 
 
@@ -43,6 +43,27 @@ class UserRepository:
                 role=record["role"],
             )
         return None
+
+    async def get_users(self) -> List[UserDB]:
+        query = """
+        MATCH (u:User)
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
+               u.password_hash as password_hash, u.role as role
+        """
+        result = await self.driver.execute_query(query)
+        items = []
+        for record in result.records:
+            items.append(
+                UserDB(
+                    id=record["id"],
+                    email=record["email"],
+                    full_name=record["full_name"],
+                    role=record["role"],
+                    password_hash=record["password_hash"],
+                )
+            )
+
+        return items
 
     async def create_user(self, user_data: dict) -> UserDB:
         user_id = str(uuid4())

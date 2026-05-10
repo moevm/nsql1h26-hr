@@ -1,6 +1,6 @@
 from typing import List
 from pydantic import BaseModel
-from app.models.user import UserResponse
+from app.models.user import UserDB
 from app.models.vacancy import VacancyResponse
 from app.models.test_task import TestTaskResponse
 from app.models.candidate import CandidateResponse
@@ -9,7 +9,7 @@ from app.models.offer import OfferResponse
 
 
 class SystemBackup(BaseModel):
-    users: List[UserResponse]
+    users: List[UserDB]
     vacancies: List[VacancyResponse]
     test_tasks: List[TestTaskResponse]
     candidates: List[CandidateResponse]
