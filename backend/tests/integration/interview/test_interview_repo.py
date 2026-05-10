@@ -6,36 +6,12 @@ from app.models.interview import (
     InterviewResult,
     InterviewFilter,
     InterviewSort,
-    InterviewPatch
+    InterviewPatch,
 )
 from app.models.helpers import SortOrder
-from app.repositories.interview_repo import InterviewRepository
-from app.repositories.candidate_repo import CandidateRepository
-from app.repositories.vacancy_repo import VacancyRepository
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate
 from app.models.user import UserCreate, Role
-from app.repositories.user_repo import UserRepository
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def interview_repo(neo4j_driver):
-    return InterviewRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def candidate_repo(neo4j_driver):
-    return CandidateRepository(neo4j_driver)
 
 
 @pytest.fixture
@@ -220,10 +196,7 @@ async def test_patch_interview(interview_repo, test_candidate, tech_spec_user):
     )
     created = await interview_repo.create_interview(create_data)
     assert created is not None
-    patch = {
-        "feedback":"Good",
-        "result":InterviewResult.INTERVIEW_PASSED
-    }
+    patch = {"feedback": "Good", "result": InterviewResult.INTERVIEW_PASSED}
     fetched = await interview_repo.patch_interview(created.id, patch)
     assert fetched is not None
     assert fetched.id == created.id

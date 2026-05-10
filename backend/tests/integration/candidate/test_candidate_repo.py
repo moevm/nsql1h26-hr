@@ -1,26 +1,13 @@
 import pytest
-from app.repositories.candidate_repo import CandidateRepository
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.vacancy_repo import VacancyRepository
 from app.models.vacancy import VacancyCreate
 from app.models.test_task import TestTaskCreate
-from app.models.candidate import CandidateCreate, CandidateFilter, CandidateSort, CandidateStatus
+from app.models.candidate import (
+    CandidateCreate,
+    CandidateFilter,
+    CandidateSort,
+    CandidateStatus,
+)
 from app.models.helpers import SortOrder
-
-
-@pytest.fixture
-def candidate_repo(neo4j_driver):
-    return CandidateRepository(neo4j_driver)
-
-
-@pytest.fixture
-def test_task_repo(neo4j_driver):
-    return TestTaskRepository(neo4j_driver)
-
-
-@pytest.fixture
-def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
 
 
 async def test_create_candidate_all(candidate_repo, test_task_repo, vacancy_repo):
@@ -400,10 +387,12 @@ async def test_sorting_by_status(candidate_repo, vacancy_repo, test_task_repo):
     )
     test_task_id = test_task["id"]
 
-    candidates = [{"status": "TEST", "name": "Boris"},
-                  {"status": "OFFER", "name": "Anna"},
-                  {"status": "NEW", "name": "Clara"}]
-    candidate_id=""
+    candidates = [
+        {"status": "TEST", "name": "Boris"},
+        {"status": "OFFER", "name": "Anna"},
+        {"status": "NEW", "name": "Clara"},
+    ]
+    candidate_id = ""
     for cand in candidates:
         candidate = CandidateCreate(
             full_name=cand["name"],

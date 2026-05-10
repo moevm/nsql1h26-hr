@@ -5,30 +5,6 @@ from app.models.offer import OfferCreate, OfferStatus, OfferFilter, OfferPatch
 from app.models.candidate import CandidateCreate, CandidateStatus
 from app.models.vacancy import VacancyCreate
 from app.models.user import UserCreate, Role
-from app.repositories.offer_repo import OfferRepository
-from app.repositories.candidate_repo import CandidateRepository
-from app.repositories.vacancy_repo import VacancyRepository
-from app.repositories.user_repo import UserRepository
-
-
-@pytest.fixture
-async def user_repo(neo4j_driver):
-    return UserRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def candidate_repo(neo4j_driver):
-    return CandidateRepository(neo4j_driver)
-
-
-@pytest.fixture
-async def offer_repo(neo4j_driver):
-    return OfferRepository(neo4j_driver)
 
 
 @pytest.fixture

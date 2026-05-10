@@ -8,6 +8,15 @@ from app.main import app
 from app.core.database import get_db
 from app.core.security import create_access_token
 
+from app.repositories.user_repo import UserRepository
+from app.repositories.vacancy_repo import VacancyRepository
+from app.repositories.test_task_repo import TestTaskRepository
+from app.repositories.candidate_repo import CandidateRepository
+from app.repositories.interview_repo import InterviewRepository
+from app.repositories.offer_repo import OfferRepository
+
+# Базовые фикстуры
+
 
 @pytest.fixture(scope="session")
 def neo4j_container():
@@ -81,9 +90,10 @@ async def create_client_with_role(role: str, email: str):
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test/api/v2",
-        headers={"Authorization": f"Bearer {token}"}
+        headers={"Authorization": f"Bearer {token}"},
     ) as client:
         yield client
+
 
 # Клиенты с конкретными ролями
 
@@ -114,3 +124,36 @@ async def tech_spec_client(async_client, neo4j_driver):
     """Клиент с предустановленным токеном авторизации."""
     async for client in create_client_with_role("TECH_SPEC", "admin@example.com"):
         yield client
+
+
+# Repo фикстуры
+
+
+@pytest.fixture
+async def user_repo(neo4j_driver):
+    return UserRepository(neo4j_driver)
+
+
+@pytest.fixture
+def candidate_repo(neo4j_driver):
+    return CandidateRepository(neo4j_driver)
+
+
+@pytest.fixture
+def test_task_repo(neo4j_driver):
+    return TestTaskRepository(neo4j_driver)
+
+
+@pytest.fixture
+async def interview_repo(neo4j_driver):
+    return InterviewRepository(neo4j_driver)
+
+
+@pytest.fixture
+def vacancy_repo(neo4j_driver):
+    return VacancyRepository(neo4j_driver)
+
+
+@pytest.fixture
+async def offer_repo(neo4j_driver):
+    return OfferRepository(neo4j_driver)

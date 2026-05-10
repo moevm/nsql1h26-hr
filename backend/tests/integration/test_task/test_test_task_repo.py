@@ -1,23 +1,10 @@
 import pytest
-from app.repositories.test_task_repo import TestTaskRepository
-from app.repositories.vacancy_repo import VacancyRepository
 from app.models.vacancy import VacancyCreate
 from app.models.test_task import (
     TestTaskCreate,
     TestTaskSort,
     TestTasksFilter,
-    TestTaskPatch,
 )
-
-
-@pytest.fixture
-def test_task_repo(neo4j_driver):
-    return TestTaskRepository(neo4j_driver)
-
-
-@pytest.fixture
-def vacancy_repo(neo4j_driver):
-    return VacancyRepository(neo4j_driver)
 
 
 async def test_create_test_task(test_task_repo, vacancy_repo):
