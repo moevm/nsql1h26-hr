@@ -78,9 +78,9 @@ class CandidatePatch(BaseModel):
 
 class CandidateFilter(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=150)
-    email: EmailStr | None = None
+    email: str | None = None
     phone: str | None = None
-    resume_url_contains: HttpUrl | None = None
+    resume_url_contains: str | None = None
     status: CandidateStatus | None = None
     vacancy_id: UUID | None = None
     vacancy_title: str | None = Field(default=None, min_length=1, max_length=100)
