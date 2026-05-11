@@ -105,7 +105,6 @@ export function Vacancies() {
   };
 
   const columns: Column<Vacancy>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'title', header: 'Название' },
     { 
       key: 'description', 
@@ -145,8 +144,7 @@ export function Vacancies() {
           {selectedVacancies.length > 0 && permissions.canDeleteVacancy && (
             <button className="btn btn-danger" onClick={handleBulkDelete}>
               🗑️ Удалить ({selectedVacancies.length})
-            </button>
-          )}
+            </button>)}
           <button className="btn" onClick={() => setShowFilters(!showFilters)}>
             🔍 Фильтры {hasActiveFilters && '●'}
           </button>
@@ -180,10 +178,10 @@ export function Vacancies() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет вакансий"
             actions={v => (
-              <button className="btn btn-sm" onClick={() => {}} title="Просмотр деталей">
-                👁️
-              </button>
-            )}
+			  <button className="btn btn-sm" onClick={() => navigate(`/vacancies/${v.id}`)} title="Просмотр деталей">
+				👁️
+			  </button>
+			)}
           />
           {totalPages > 1 && (
             <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
