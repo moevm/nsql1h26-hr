@@ -157,9 +157,13 @@ export function Interviews() {
   };
 
   const columns: Column<Interview>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'candidate_id', header: 'Кандидат', render: i => candidates.find(c => c.id === i.candidate_id)?.full_name || '—' },
-    { key: 'vacancy_id', header: 'Вакансия', render: i => vacancies.find(v => v.id === i.vacancy_id)?.title || '—' },
+    { key: 'vacancy_id', header: 'Вакансия', render: i => {
+		const candidate = candidates.find(c => c.id === i.candidate_id);
+		const vacancy = candidate && vacancies.find(v => v.id === candidate.vacancy_id);
+		return vacancy?.title || '—';
+	  }
+	},
     { key: 'tech_spec_id', header: 'Интервьюер', render: i => techSpecs.find(t => t.id === i.tech_spec_id)?.full_name || '—' },
     { key: 'scheduled_at', header: 'Дата и время', render: i => new Date(i.scheduled_at * 1000).toLocaleString('ru-RU') },
     { key: 'result', header: 'Результат', render: i => <span className={`badge ${getResultBadgeClass(i.result)}`}>{getResultLabel(i.result)}</span> },
@@ -205,10 +209,10 @@ export function Interviews() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет интервью"
             actions={i => (
-              <button className="btn btn-sm" onClick={() => {}} title="Просмотр деталей">
-                👁️
-              </button>
-            )}
+			  <button className="btn btn-sm" onClick={() => navigate(`/interviews/${i.id}`)} title="Просмотр деталей">
+				👁️
+			  </button>
+			)}
           />
           {totalPages > 1 && (
             <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>

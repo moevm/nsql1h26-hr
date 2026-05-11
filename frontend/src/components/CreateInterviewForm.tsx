@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { createInterview, getCandidates, getVacancies, getUsers, Candidate, Vacancy, User } from '../api';
+import { createInterview, getCandidates, getUsers, Candidate, User } from '../api';
 
 interface CreateInterviewFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  preselectedCandidate?: Candidate; // если передан – кандидат фиксирован
 }
 
-export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewFormProps) {
-  const [candidateId, setCandidateId] = useState('');
-  const [vacancyId, setVacancyId] = useState('');
+export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate }: CreateInterviewFormProps) {
+  const [candidateId, setCandidateId] = useState(preselectedCandidate?.id || '');
   const [techSpecId, setTechSpecId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
   const [zoomUrl, setZoomUrl] = useState('');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [techSpecs, setTechSpecs] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -25,16 +24,19 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
 
   async function loadData() {
     try {
-      const [candidatesRes, vacanciesRes, usersRes] = await Promise.all([
-        getCandidates({ status: 'TEST', limit: 100 }), // Только кандидаты в статусе TEST
-        getVacancies({ status: 'OPEN', limit: 100 }), // Только открытые вакансии
-        getUsers({ role: 'TECH_SPEC', limit: 100 }),
-      ]);
-      setCandidates(candidatesRes.items);
-      setVacancies(vacanciesRes.items);
+      const promises = [];
+      if (!preselectedCandidate) {
+        promises.push(getCandidates({ limit: 200 }));
+      } else {
+        promises.push(Promise.resolve({ items: [] }));
+      }
+      promises.push(getUsers({ role: 'TECH_SPEC', limit: 200 }));
+
+      const [candidatesRes, usersRes] = await Promise.all(promises);
+      if (!preselectedCandidate) setCandidates(candidatesRes.items);
       setTechSpecs(usersRes.items);
     } catch (err) {
-      console.error('Failed to load data:', err);
+      console.error(err);
       toast.error('Не удалось загрузить данные');
     } finally {
       setLoadingData(false);
@@ -43,29 +45,15 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!candidateId) {
-      toast.error('Выберите кандидата');
-      return;
-    }
-    if (!vacancyId) {
-      toast.error('Выберите вакансию');
-      return;
-    }
-    if (!techSpecId) {
-      toast.error('Выберите технического специалиста');
-      return;
-    }
-    if (!scheduledAt) {
-      toast.error('Укажите дату и время интервью');
-      return;
-    }
+    const finalCandidateId = preselectedCandidate?.id || candidateId;
+    if (!finalCandidateId) return toast.error('Выберите кандидата');
+    if (!techSpecId) return toast.error('Выберите технического специалиста');
+    if (!scheduledAt) return toast.error('Укажите дату и время');
 
     setLoading(true);
-    
     try {
       await createInterview({
-        candidate_id: candidateId,
+        candidate_id: finalCandidateId,
         tech_spec_id: techSpecId,
         scheduled_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
         zoom_url: zoomUrl || undefined,
@@ -84,10 +72,6 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
     }
   };
 
-  const selectedCandidate = candidates.find(c => c.id === candidateId);
-  const selectedVacancy = vacancies.find(v => v.id === vacancyId);
-
-  // Минимальная дата и время — сейчас + 1 час
   const getMinDateTime = () => {
     const now = new Date();
     now.setHours(now.getHours() + 1);
@@ -98,48 +82,30 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
     <form onSubmit={handleSubmit}>
       <div className="modal-header">
         <h3>Запланировать интервью</h3>
-        <p>Выберите кандидата, вакансию и интервьюера</p>
       </div>
 
-      <div className="form-group">
-        <label>Кандидат *</label>
-        <select 
-          value={candidateId} 
-          onChange={e => setCandidateId(e.target.value)} 
-          required 
-          disabled={loading || loadingData}
-        >
-          <option value="">Выберите кандидата</option>
-          {candidates.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.full_name} — {c.status}
-            </option>
-          ))}
-        </select>
-        {loadingData && <small>Загрузка кандидатов...</small>}
-        {candidates.length === 0 && !loadingData && (
-          <small style={{ color: '#eab308' }}>
-            Нет кандидатов в статусе TEST
-          </small>
-        )}
-      </div>
-
-      <div className="form-group">
-        <label>Вакансия *</label>
-        <select 
-          value={vacancyId} 
-          onChange={e => setVacancyId(e.target.value)} 
-          required 
-          disabled={loading || loadingData}
-        >
-          <option value="">Выберите вакансию</option>
-          {vacancies.map(v => (
-            <option key={v.id} value={v.id}>
-              {v.title}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Блок выбора/информации о кандидате */}
+      {!preselectedCandidate ? (
+        <div className="form-group">
+          <label>Кандидат *</label>
+          <select 
+            value={candidateId} 
+            onChange={e => setCandidateId(e.target.value)} 
+            required 
+            disabled={loading || loadingData}
+          >
+            <option value="">Выберите кандидата</option>
+            {candidates.map(c => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
+          </select>
+          {loadingData && <small>Загрузка кандидатов...</small>}
+        </div>
+      ) : (
+        <div className="info-box" style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #bbf7d0' }}>
+          <strong>Кандидат:</strong> {preselectedCandidate.full_name}
+        </div>
+      )}
 
       <div className="form-group">
         <label>Технический специалист *</label>
@@ -166,9 +132,6 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
           disabled={loading}
           min={getMinDateTime()}
         />
-        <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-          Время указано по местному времени
-        </small>
       </div>
 
       <div className="form-group">
@@ -182,24 +145,8 @@ export function CreateInterviewForm({ onSuccess, onCancel }: CreateInterviewForm
         />
       </div>
 
-      {selectedCandidate && selectedVacancy && (
-        <div className="info-box" style={{ 
-          background: '#f0fdf4', 
-          padding: '12px', 
-          borderRadius: '8px', 
-          marginTop: '12px',
-          border: '1px solid #bbf7d0'
-        }}>
-          <small style={{ color: '#166534' }}>
-            📋 Интервью для <strong>{selectedCandidate.full_name}</strong> на позицию <strong>{selectedVacancy.title}</strong>
-          </small>
-        </div>
-      )}
-      
-      <div className="form-actions" style={{ marginTop: '20px' }}>
-        <button type="button" className="btn" onClick={onCancel} disabled={loading}>
-          Отмена
-        </button>
+      <div className="form-actions">
+        <button type="button" className="btn" onClick={onCancel} disabled={loading}>Отмена</button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Создание...' : 'Запланировать интервью'}
         </button>
