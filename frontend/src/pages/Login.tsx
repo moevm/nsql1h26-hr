@@ -1,34 +1,67 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { login } from '../api';
+import { login, createUser } from '../api';
 import '../styles/App.css';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerData, setRegisterData] = useState({
+    email: '',
+    full_name: '',
+    password: '',
+    role: 'HR' as 'ADMIN' | 'HR' | 'MANAGER' | 'TECH_SPEC'
+  });
+  const [registerLoading, setRegisterLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password) {
       toast.error('Введите email и пароль');
       return;
     }
-
     setLoading(true);
-    
     try {
       await login({ email, password });
       toast.success('Добро пожаловать!');
       navigate('/vacancies');
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Ошибка при входе в систему');
+      toast.error(err.message || 'Ошибка при входе');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { email, full_name, password, role } = registerData;
+    if (!email.trim() || !full_name.trim() || !password.trim()) {
+      toast.error('Заполните все поля');
+      return;
+    }
+    if (password.length < 6) {
+      toast.error('Пароль должен быть не менее 6 символов');
+      return;
+    }
+    setRegisterLoading(true);
+    try {
+      await createUser({ email, full_name, password, role });
+      toast.success('Пользователь успешно зарегистрирован! Теперь войдите.');
+      setShowRegisterModal(false);
+      // Очищаем форму
+      setRegisterData({ email: '', full_name: '', password: '', role: 'HR' });
+      // Можно автоматически заполнить поля логина email'ом
+      setEmail(email);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка регистрации');
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -70,7 +103,17 @@ export function Login() {
             {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
-         <div className="login-footer">
+        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => setShowRegisterModal(true)}
+            style={{ fontSize: '0.875rem' }}
+          >
+            Зарегистрировать нового пользователя
+          </button>
+        </div>
+        <div className="login-footer">
           <p>Тестовые пользователи:</p>
           <ul>
             <li><strong>HR:</strong> hr@example.com / hr123</li>
@@ -80,6 +123,74 @@ export function Login() {
           </ul>
         </div>
       </div>
+
+      {/* Модальное окно регистрации */}
+      {showRegisterModal && (
+        <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Регистрация нового пользователя</h3>
+              <p>Заполните данные</p>
+            </div>
+            <form onSubmit={handleRegister}>
+              <div className="form-group">
+                <label>Email *</label>
+                <input
+                  type="email"
+                  value={registerData.email}
+                  onChange={e => setRegisterData({ ...registerData, email: e.target.value })}
+                  required
+                  disabled={registerLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label>Полное имя *</label>
+                <input
+                  type="text"
+                  value={registerData.full_name}
+                  onChange={e => setRegisterData({ ...registerData, full_name: e.target.value })}
+                  required
+                  disabled={registerLoading}
+                />
+              </div>
+              <div className="form-group">
+                <label>Пароль *</label>
+                <input
+                  type="password"
+                  value={registerData.password}
+                  onChange={e => setRegisterData({ ...registerData, password: e.target.value })}
+                  required
+                  disabled={registerLoading}
+                  minLength={6}
+                />
+                <small>Минимум 6 символов</small>
+              </div>
+              <div className="form-group">
+                <label>Роль *</label>
+                <select
+                  value={registerData.role}
+                  onChange={e => setRegisterData({ ...registerData, role: e.target.value as any })}
+                  required
+                  disabled={registerLoading}
+                >
+                  <option value="HR">HR</option>
+                  <option value="ADMIN">Администратор</option>
+                  <option value="MANAGER">Менеджер</option>
+                  <option value="TECH_SPEC">Технический специалист</option>
+                </select>
+              </div>
+              <div className="form-actions">
+                <button type="button" className="btn" onClick={() => setShowRegisterModal(false)} disabled={registerLoading}>
+                  Отмена
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={registerLoading}>
+                  {registerLoading ? 'Регистрация...' : 'Зарегистрировать'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

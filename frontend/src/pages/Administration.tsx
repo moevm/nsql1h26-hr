@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { DataTable, Column } from '../components/DataTable';
 import { FilterBar } from '../components/FilterBar';
 import { useFilters } from '../hooks/useFilters';
 import { FilterField } from '../types/filters';
 import { toast } from 'sonner';
-import { getUsers, deleteUser, User } from '../api';
+import { getUsers, deleteUser, adminBackup, adminRestore, User, SystemBackup } from '../api';
 import { usePermissions } from '../hooks/usePermissions';
 import { CreateUserForm } from '../components/CreateUserForm';
 import '../styles/App.css';
@@ -12,6 +12,7 @@ import '../styles/App.css';
 export function Administration() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const permissions = usePermissions(user?.role);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +21,7 @@ export function Administration() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     email: '',
@@ -91,6 +93,60 @@ export function Administration() {
     }
   };
 
+  const handleExportBackup = async () => {
+    if (!permissions.canViewUsers) {
+      toast.error('Недостаточно прав для экспорта');
+      return;
+    }
+    setBackupLoading(true);
+    try {
+      const backup = await adminBackup();
+      const dataStr = JSON.stringify(backup, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${new Date().toISOString().slice(0,19)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Бэкап успешно сохранён');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка при экспорте');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!permissions.canViewUsers) {
+      toast.error('Недостаточно прав для импорта');
+      return;
+    }
+    if (!window.confirm('Восстановление из бэкапа полностью перезапишет все данные. Продолжить?')) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setBackupLoading(true);
+    try {
+      const text = await file.text();
+      const backupData: SystemBackup = JSON.parse(text);
+      await adminRestore(backupData);
+      toast.success('Данные успешно восстановлены');
+      window.location.reload(); // перезагружаем, чтобы обновить всё состояние
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка при импорте');
+    } finally {
+      setBackupLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const filterFields: FilterField[] = useMemo(
     () => [
       { key: 'email', label: 'Email', type: 'text', placeholder: 'Email пользователя' },
@@ -131,7 +187,6 @@ export function Administration() {
   };
 
   const columns: Column<User>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'email', header: 'Email' },
     { key: 'full_name', header: 'ФИО' },
     { key: 'role', header: 'Роль', render: u => <span className={`badge ${getRoleBadgeClass(u.role)}`}>{getRoleLabel(u.role)}</span> },
@@ -170,6 +225,19 @@ export function Administration() {
               ➕ Добавить пользователя
             </button>
           )}
+          <button className="btn" onClick={handleExportBackup} disabled={backupLoading}>
+            📦 Экспорт БД
+          </button>
+          <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={backupLoading}>
+            📂 Импорт БД
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="application/json"
+            style={{ display: 'none' }}
+            onChange={handleImportBackup}
+          />
         </div>
       </div>
 
