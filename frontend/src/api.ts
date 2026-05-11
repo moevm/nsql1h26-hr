@@ -400,4 +400,39 @@ export async function deleteOffer(id: string): Promise<void> {
   return apiRequest(`/offers/${id}`, { method: 'DELETE' });
 }
 
+export async function getVacancyById(id: string): Promise<Vacancy> {
+  return apiRequest(`/vacancies/${id}`);
+}
 
+export async function getCandidateById(id: string): Promise<Candidate> {
+  return apiRequest(`/candidates/${id}`);
+}
+
+export async function getInterviewById(id: string): Promise<Interview> {
+  return apiRequest(`/interviews/${id}`);
+}
+
+export async function getOfferById(id: string): Promise<Offer> {
+  return apiRequest(`/offers/${id}`);
+}
+
+// ---------- Admin Backup / Restore ----------
+export interface SystemBackup {
+  users: User[];
+  vacancies: Vacancy[];
+  test_tasks: TestTask[];
+  candidates: Candidate[];
+  interviews: Interview[];
+  offers: Offer[];
+}
+
+export async function adminBackup(): Promise<SystemBackup> {
+  return apiRequest('/admin/backup');
+}
+
+export async function adminRestore(backup: SystemBackup): Promise<{ status: string }> {
+  return apiRequest('/admin/restore', {
+    method: 'POST',
+    body: JSON.stringify(backup),
+  });
+}
