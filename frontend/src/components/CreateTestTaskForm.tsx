@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { createTestTask, Vacancy, TestTask } from '../api';
+import { createTestTask, updateTestTask, Vacancy, TestTask } from '../api';
 
 interface CreateTestTaskFormProps {
   vacancies: Vacancy[];
   onSuccess: () => void;
   onCancel: () => void;
   initialData?: TestTask;
-  preselectedVacancy?: Vacancy; // если передана – вакансия фиксирована
+  preselectedVacancy?: Vacancy;
 }
 
 export function CreateTestTaskForm({ vacancies, onSuccess, onCancel, initialData, preselectedVacancy }: CreateTestTaskFormProps) {
@@ -40,7 +40,6 @@ export function CreateTestTaskForm({ vacancies, onSuccess, onCancel, initialData
     }
   };
 
-  // Определяем, нужно ли показывать выбор вакансии
   const showVacancySelect = !preselectedVacancy && !isEdit;
 
   return (
@@ -49,7 +48,6 @@ export function CreateTestTaskForm({ vacancies, onSuccess, onCancel, initialData
         <h3>{isEdit ? 'Редактирование тестового задания' : 'Новое тестовое задание'}</h3>
       </div>
 
-      {/* Если передана preselectedVacancy, показываем информационный блок */}
       {preselectedVacancy && (
         <div className="info-box" style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #bbf7d0' }}>
           <strong>Вакансия:</strong> {preselectedVacancy.title}

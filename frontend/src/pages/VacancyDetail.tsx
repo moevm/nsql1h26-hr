@@ -26,9 +26,7 @@ export function VacancyDetail() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddTestModal, setShowAddTestModal] = useState(false);
-  const [editingTestId, setEditingTestId] = useState<string | null>(null);
-  const [editTestTitle, setEditTestTitle] = useState('');
-  const [editTestUrl, setEditTestUrl] = useState('');
+  const [editingTestTask, setEditingTestTask] = useState<TestTask | null>(null);
 
   useEffect(() => {
     loadData();
@@ -62,21 +60,6 @@ export function VacancyDetail() {
       loadData();
     } catch (err) {
       toast.error('Ошибка удаления');
-    }
-  }
-
-  async function handleUpdateTestTask(taskId: string) {
-    if (!editTestTitle.trim() || !editTestUrl.trim()) {
-      toast.error('Заполните название и ссылку');
-      return;
-    }
-    try {
-      await updateTestTask(taskId, { title: editTestTitle, test_task_url: editTestUrl });
-      toast.success('Обновлено');
-      setEditingTestId(null);
-      loadData();
-    } catch (err) {
-      toast.error('Ошибка обновления');
     }
   }
 
@@ -131,51 +114,19 @@ export function VacancyDetail() {
           <div className="list-card">
             {testTasks.map(task => (
               <div key={task.id} className="list-item">
-                {editingTestId === task.id ? (
-                  <div style={{ flex: 1, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <input
-                      type="text"
-                      value={editTestTitle}
-                      onChange={e => setEditTestTitle(e.target.value)}
-                      placeholder="Название"
-                      style={{ flex: 2 }}
-                    />
-                    <input
-                      type="url"
-                      value={editTestUrl}
-                      onChange={e => setEditTestUrl(e.target.value)}
-                      placeholder="Ссылка"
-                      style={{ flex: 3 }}
-                    />
-                    <button className="btn btn-sm btn-primary" onClick={() => handleUpdateTestTask(task.id)}>💾</button>
-                    <button className="btn btn-sm" onClick={() => setEditingTestId(null)}>✖️</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="list-item-content">
-                      <a href={task.test_task_url} target="_blank" rel="noopener noreferrer" className="test-task-link">
-                        {task.title}
-                      </a>
-                    </div>
-                    <div className="list-item-actions">
-                      {permissions.canUpdateTestTask && (
-                        <button
-                          className="btn btn-sm"
-                          onClick={() => {
-                            setEditingTestId(task.id);
-                            setEditTestTitle(task.title);
-                            setEditTestUrl(task.test_task_url);
-                          }}
-                        >✏️</button>
-                      )}
-                      {permissions.canDeleteTestTask 
-                      	/* && (
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTestTask(task.id)}>🗑️</button>
-                      	) */
-                      }
-                    </div>
-                  </>
-                )}
+                <div className="list-item-content">
+                  <a href={task.test_task_url} target="_blank" rel="noopener noreferrer" className="test-task-link">
+                    {task.title}
+                  </a>
+                </div>
+                <div className="list-item-actions">
+                  {permissions.canEditTestTask && (
+                    <button className="btn btn-sm" onClick={() => setEditingTestTask(task)}>✏️</button>
+                  )}
+                  {/*permissions.canDeleteTestTask && (
+                    <button className="btn btn-sm btn-danger" onClick={() => handleDeleteTestTask(task.id)}>🗑️</button>
+                  )*/}
+                </div>
               </div>
             ))}
           </div>
@@ -216,11 +167,24 @@ export function VacancyDetail() {
         <div className="modal-overlay" onClick={() => setShowAddTestModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <CreateTestTaskForm
-			  vacancies={[vacancy]} // всё ещё нужен список для совместимости, но preselectedVacancy перекроет выбор
-			  preselectedVacancy={vacancy}
-			  onSuccess={() => { setShowAddTestModal(false); loadData(); }}
-			  onCancel={() => setShowAddTestModal(false)}
-			/>
+              vacancies={[vacancy]}
+              preselectedVacancy={vacancy}
+              onSuccess={() => { setShowAddTestModal(false); loadData(); }}
+              onCancel={() => setShowAddTestModal(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {editingTestTask && (
+        <div className="modal-overlay" onClick={() => setEditingTestTask(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <CreateTestTaskForm
+              vacancies={[vacancy]}
+              initialData={editingTestTask}
+              onSuccess={() => { setEditingTestTask(null); loadData(); }}
+              onCancel={() => setEditingTestTask(null)}
+            />
           </div>
         </div>
       )}

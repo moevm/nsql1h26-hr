@@ -215,6 +215,16 @@ export async function createTestTask(data: {
   });
 }
 
+export async function updateTestTask(
+  id: string,
+  data: { title?: string; test_task_url?: string }
+): Promise<TestTask> {
+  return apiRequest(`/test-tasks/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteTestTask(id: string): Promise<void> {
   return apiRequest(`/test-tasks/${id}`, { method: 'DELETE' });
 }
