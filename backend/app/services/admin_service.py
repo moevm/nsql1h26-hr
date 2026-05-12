@@ -11,6 +11,7 @@ from app.repositories.test_task_repo import TestTaskRepository
 from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.interview_repo import InterviewRepository
 from app.repositories.offer_repo import OfferRepository
+from app.repositories.admin_repo import AdminRepository
 
 
 class AdminService:
@@ -22,6 +23,7 @@ class AdminService:
         candidate_repo: CandidateRepository,
         interview_repo: InterviewRepository,
         offer_repo: OfferRepository,
+        admin_repo: AdminRepository
     ):
         self.user_repo = user_repo
         self.vacancy_repo = vacancy_repo
@@ -29,6 +31,7 @@ class AdminService:
         self.candidate_repo = candidate_repo
         self.interview_repo = interview_repo
         self.offer_repo = offer_repo
+        self.admin_repo = admin_repo
 
     async def backup(self) -> SystemBackup:
         users = await self.user_repo.get_users()
@@ -54,6 +57,7 @@ class AdminService:
         )
 
     async def restore(self, data_backup: SystemBackup) -> None:
+        await self.admin_repo.erase_all()
         for user in data_backup.users:
             await self.user_repo.restore_user(user)
         for vacancy in data_backup.vacancies:
@@ -66,3 +70,6 @@ class AdminService:
             await self.interview_repo.restore_interview(interview)
         for offer in data_backup.offers:
             await self.offer_repo.restore_offer(offer)
+
+    async def is_empty(self):
+        return await self.admin_repo.is_empty()

@@ -1,0 +1,380 @@
+{
+  "users": [
+    {
+      "id": "97675941-1412-4716-9d9d-36fefafd8f4b",
+      "email": "admin@example.com",
+      "full_name": "Администратор",
+      "role": "ADMIN",
+      "password_hash": "$2b$12$EuL7J3TwjCZiRCwMoNZThOHK0aBy1fCvBXsJFy6l8992LjjA9yJ.O"
+    },
+    {
+      "id": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "email": "hr@example.com",
+      "full_name": "HR Менеджер",
+      "role": "HR",
+      "password_hash": "$2b$12$jErT5a50hQBRTuBk2DpWFeGLei5cCL7TcdDoBWdrMSHWueq8pnK9q"
+    },
+    {
+      "id": "097b885b-bc75-42fa-8ff0-8bccfee0dff1",
+      "email": "manager@example.com",
+      "full_name": "Руководитель",
+      "role": "MANAGER",
+      "password_hash": "$2b$12$44XtEwY4d.ePz5WiwvnAoeURz.n5ixVSg5yQZolLzW6Kcisu9kYsW"
+    },
+    {
+      "id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "email": "tech@example.com",
+      "full_name": "Технический специалист",
+      "role": "TECH_SPEC",
+      "password_hash": "$2b$12$qhqnipgDTZIcsrYTDGuufudh4YB.6nXI7bjonconbVmhXqK12X9hu"
+    }
+  ],
+  "vacancies": [
+    {
+      "id": "f94ed4bd-4dce-4806-a603-cca9ec5ec432",
+      "title": "ПЛИСовод/RISC-V Dev (Senior+)",
+      "description": "Работа на уютном заводе. Задачи: разработка FPGA SystemVerilog/Verilog под ЦОС-систему, интеграция с датчиками и серверами. Требования к кандидату: Asm, C, SystemVerilog, UART, I2C, SPI, DMA, ЦАП/АЦП, ЦОС, знание электричества Калашникова. Работа не пыльная. бьёт током  ",
+      "status": "OPEN",
+      "created_at": 1778592621,
+      "closed_at": null
+    },
+    {
+      "id": "34e7ff27-77c1-4259-b433-404fb2bf6ed8",
+      "title": "DevOps Инженер",
+      "description": "Поддержка и масштабирование инфраструктуры высоконагруженного сервиса.Требования: Опыт работы с Kubernetes (K8s), настройка CI/CD (GitLab), опыт работы с облаками (Yandex/AWS).Задачи: Автоматизация деплоя, мониторинг доступности сервисов, управление конфигурациями серверов.",
+      "status": "CLOSED",
+      "created_at": 1778592453,
+      "closed_at": null
+    },
+    {
+      "id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff",
+      "title": "Офис-менеджер",
+      "description": "\"Лицо\" компании и хозяйка нашего уютного офиса в центре города.Требования: Доброжелательность, организованность, владение офисной техникой и пакетом MS Office.Задачи: Прием звонков и гостей, заказ канцелярии/продуктов, работа с входящей корреспонденцией.",
+      "status": "OPEN",
+      "created_at": 1778592438,
+      "closed_at": null
+    },
+    {
+      "id": "689d0e52-cac3-4948-b8d0-b12a828486ae",
+      "title": "Бухгалтер по расчёту ЗП",
+      "description": "Работа в стабильном производственном холдинге (штат 500+ сотрудников).Требования: Знание 1С:ЗУП 8.3, опыт работы с вахтовым методом и сменными графиками.Задачи: Расчет зарплат, отпускных, больничных; подача отчетности в СФР и налоговую. Отмыв 60% +- 3%",
+      "status": "CLOSED",
+      "created_at": 1778592405,
+      "closed_at": null
+    },
+    {
+      "id": "76353b6c-986e-451c-a48a-bffa6669beac",
+      "title": "Системный аналитик",
+      "description": "Связующее звено между бизнесом и разработкой в крупном ритейл-проекте.Требования: Умение писать ТЗ, знание SQL на уровне простых запросов, опыт работы с UML/BPMN.Задачи: Сбор требований у заказчиков, описание логики работы систем, интеграции с внешними API, разборки с разработчиками и заказчиками",
+      "status": "OPEN",
+      "created_at": 1778592362,
+      "closed_at": null
+    },
+    {
+      "id": "4d07f391-5f20-4865-96f5-576c8b46714d",
+      "title": "Единственный несчастный HR",
+      "description": "Единственный HR в быстрорастущий стартап (30 человек). Построение процессов с нуля.Требования: Опыт в подборе (IT/Marketing), знание ТК, навыки формирования корпоративной культуры.Задачи: Полный цикл рекрутинга, адаптация новичков, ведение КДП, организация тимбилдингов.",
+      "status": "CLOSED",
+      "created_at": 1778592312,
+      "closed_at": null
+    },
+    {
+      "id": "d0ac97d3-673d-4039-8a2a-363861c309d1",
+      "title": "Менеджер по продажам (B2B)",
+      "description": "В связи с расширением отдела ищем активного \"хантера\" в команду облачных сервисов.\nТребования: Грамотная речь, опыт работы в CRM, навык проведения презентаций первым лицам компаний.\nЗадачи: Поиск лидов, проведение встреч, дожим сделок до оплаты, выполнение плана продаж.",
+      "status": "OPEN",
+      "created_at": 1778592270,
+      "closed_at": null
+    },
+    {
+      "id": "1ed50a78-6a85-4a66-90c4-25de74cd2da0",
+      "title": "Python Developer",
+      "description": "Ищем разработчика в команду финтех-проекта для развития, разработки и тестирования микросервисной архитектуры.\n\nТребования: \n- Опыт от 3 лет, \n- знание Django/FastAPI, PostgreSQL, Docker. \n- Умение писать unit-тесты.\n\nЗадачи: Проектирование API, оптимизация запросов к БД, ревью кода коллег, участие в планировании спринтов.",
+      "status": "OPEN",
+      "created_at": 1778427106,
+      "closed_at": null
+    }
+  ],
+  "test_tasks": [
+    {
+      "id": "992685d3-675e-4cb9-bcce-88a7a3d7adee",
+      "title": "Kafka и прочее",
+      "test_task_url": "https://drive.com/djfwjdbcbzvaghdhjfkgmfhtq",
+      "vacancy_id": "34e7ff27-77c1-4259-b433-404fb2bf6ed8"
+    },
+    {
+      "id": "59b8036a-b26c-482e-b530-c7feffdde9a1",
+      "title": "Kubernetes",
+      "test_task_url": "https://k8s.com/",
+      "vacancy_id": "34e7ff27-77c1-4259-b433-404fb2bf6ed8"
+    },
+    {
+      "id": "2d252051-da65-4f8d-94a0-177b1e330835",
+      "title": "Snake Game - Python",
+      "test_task_url": "https://drive.com/hsehjahdkfbnrkxbdf/view",
+      "vacancy_id": "1ed50a78-6a85-4a66-90c4-25de74cd2da0"
+    },
+    {
+      "id": "d5ad4c35-ecdb-45b5-a33b-c069878ffb39",
+      "title": "Модуляция сигнала",
+      "test_task_url": "https://wiki.com/",
+      "vacancy_id": "f94ed4bd-4dce-4806-a603-cca9ec5ec432"
+    },
+    {
+      "id": "8c0d5fba-90ec-4d0d-8c8a-4e8de65f5647",
+      "title": "Переделать API к этому сервису",
+      "test_task_url": "http://localhost:8080/",
+      "vacancy_id": "76353b6c-986e-451c-a48a-bffa6669beac"
+    },
+    {
+      "id": "9ebbc33c-a63f-43c8-89fc-55b0067456bc",
+      "title": "Продайте мне ручку",
+      "test_task_url": "https://dns.com/",
+      "vacancy_id": "d0ac97d3-673d-4039-8a2a-363861c309d1"
+    },
+    {
+      "id": "7bbbb95b-1e30-4cd7-b6da-02cfa09a87e8",
+      "title": "Самопрезентация",
+      "test_task_url": "https://drive.com/lsndpfbeybrvmb",
+      "vacancy_id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "0f156dea-f189-4fff-89c0-61846ec13cf3",
+      "full_name": "Полянских Алиса Дмитриевна",
+      "email": "alipoly@gmail.com",
+      "phone": "+78549632524",
+      "resume_url": "https://resume.com/25234481548325h",
+      "status": "REJECTED",
+      "vacancy_id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff",
+      "test_task_id": null
+    },
+    {
+      "id": "b23d12ca-dca0-41cb-861d-cb77cab459cf",
+      "full_name": "Полунина Мила Ивановна",
+      "email": "cute@gmail.com",
+      "phone": "+79658534541",
+      "resume_url": "https://milee.com/",
+      "status": "REJECTED",
+      "vacancy_id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff",
+      "test_task_id": null
+    },
+    {
+      "id": "43b4227b-550b-40e9-988f-7f023d62457e",
+      "full_name": "Никишаева Ирина Владимировна",
+      "email": "nikirik@mail.ru",
+      "phone": "+79866574128",
+      "resume_url": null,
+      "status": "HIRED",
+      "vacancy_id": "689d0e52-cac3-4948-b8d0-b12a828486ae",
+      "test_task_id": null
+    },
+    {
+      "id": "8e5d0616-52ab-4cc6-bed0-5d48ceaa6159",
+      "full_name": "Невидимко Екатерина Олеговна",
+      "email": "unvisible@gmail.com",
+      "phone": "+79658527468",
+      "resume_url": "https://hr-conspiracy.com/",
+      "status": "HIRED",
+      "vacancy_id": "4d07f391-5f20-4865-96f5-576c8b46714d",
+      "test_task_id": null
+    },
+    {
+      "id": "af34570b-8fde-436c-807d-39a9dab4bb68",
+      "full_name": "Мягких Иван Петрович",
+      "email": "sweety@yandex.ru",
+      "phone": "+79692569325",
+      "resume_url": "https://pythonclub.com/me",
+      "status": "TEST",
+      "vacancy_id": "1ed50a78-6a85-4a66-90c4-25de74cd2da0",
+      "test_task_id": null
+    },
+    {
+      "id": "9193c890-72cb-4f27-8959-89630e33f779",
+      "full_name": "Маништейн Авраам Моисеевич",
+      "email": "business@money.com",
+      "phone": "+79996663322",
+      "resume_url": "https://mmm.su/",
+      "status": "REJECTED",
+      "vacancy_id": "d0ac97d3-673d-4039-8a2a-363861c309d1",
+      "test_task_id": null
+    },
+    {
+      "id": "42be520a-f031-4333-bedc-752c607a8b98",
+      "full_name": "Иванов Вениамин Сидорович",
+      "email": "h145a4@yahoo.com",
+      "phone": "+71115552312",
+      "resume_url": "https://onjusrfvouhsfvouhgbsrfvougbrfv.com/",
+      "status": "OFFER",
+      "vacancy_id": "f94ed4bd-4dce-4806-a603-cca9ec5ec432",
+      "test_task_id": null
+    },
+    {
+      "id": "9880ed96-8f4b-4708-8d2f-c915f1cb2918",
+      "full_name": "Гараев Тагир",
+      "email": "gigachad@gmail.com",
+      "phone": "+79991115544",
+      "resume_url": "https://coolguy.com/",
+      "status": "HIRED",
+      "vacancy_id": "34e7ff27-77c1-4259-b433-404fb2bf6ed8",
+      "test_task_id": null
+    },
+    {
+      "id": "1382a129-513e-4a71-b100-28896203cf80",
+      "full_name": "Белый Максим Федорович",
+      "email": "walterwhite@gmail.com",
+      "phone": "+78546523125",
+      "resume_url": null,
+      "status": "AWAIT_INTERVIEW",
+      "vacancy_id": "1ed50a78-6a85-4a66-90c4-25de74cd2da0",
+      "test_task_id": null
+    }
+  ],
+  "interviews": [
+    {
+      "id": "b4eae61b-b329-4f6f-a6d2-3c701aa4a2d6",
+      "candidate_id": "42be520a-f031-4333-bedc-752c607a8b98",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1797080400,
+      "zoom_url": null,
+      "feedback": "SPI I2C USART обсудили",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
+      "id": "59ef4e59-5db3-42e8-b48a-67513f3b7e05",
+      "candidate_id": "9193c890-72cb-4f27-8959-89630e33f779",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1797063300,
+      "zoom_url": null,
+      "feedback": "Задавил авторитетом",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
+      "id": "5f963f0e-0121-4cb3-a91c-059be217300a",
+      "candidate_id": "9880ed96-8f4b-4708-8d2f-c915f1cb2918",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1796893200,
+      "zoom_url": null,
+      "feedback": "Ну он легенда",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
+      "id": "495bbdc3-4cac-4421-a876-24b5f2350450",
+      "candidate_id": "1382a129-513e-4a71-b100-28896203cf80",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1786611600,
+      "zoom_url": "https://zoom/meeting/fdhjvgbwofghvidb",
+      "feedback": null,
+      "result": "AWAIT_INTERVIEW"
+    },
+    {
+      "id": "3c70d116-0c42-45ec-9fc1-c5b0eb34b9e2",
+      "candidate_id": "0f156dea-f189-4fff-89c0-61846ec13cf3",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1780740000,
+      "zoom_url": null,
+      "feedback": "Крутая, но Мила лучше",
+      "result": "INTERVIEW_FAILED"
+    },
+    {
+      "id": "9e84be2e-47e6-49fd-b821-4c417407d97c",
+      "candidate_id": "b23d12ca-dca0-41cb-861d-cb77cab459cf",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1780477200,
+      "zoom_url": null,
+      "feedback": "Крутая, лучшая!",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
+      "id": "091b8022-8d04-45f1-9d73-352c3b384812",
+      "candidate_id": "8e5d0616-52ab-4cc6-bed0-5d48ceaa6159",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1780304400,
+      "zoom_url": null,
+      "feedback": "Она сама меня наняла",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
+      "id": "7d4e16e1-5b73-43bc-977e-0a6d9750c342",
+      "candidate_id": "43b4227b-550b-40e9-988f-7f023d62457e",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1778594400,
+      "zoom_url": null,
+      "feedback": "Задумался, что это еще много платят...",
+      "result": "INTERVIEW_PASSED"
+    }
+  ],
+  "offers": [
+    {
+      "id": "ad32c3eb-353c-479d-9805-e0daa471decc",
+      "candidate_id": "42be520a-f031-4333-bedc-752c607a8b98",
+      "vacancy_id": "f94ed4bd-4dce-4806-a603-cca9ec5ec432",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 5550000,
+      "start_at": 1812153600,
+      "created_at": 1778595312,
+      "status": "APPROVED_MNG"
+    },
+    {
+      "id": "cc858f1c-11dd-4443-90a7-545f6fe5af6d",
+      "candidate_id": "43b4227b-550b-40e9-988f-7f023d62457e",
+      "vacancy_id": "689d0e52-cac3-4948-b8d0-b12a828486ae",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 9999000,
+      "start_at": 1828569600,
+      "created_at": 1778595289,
+      "status": "APPROVED_CND"
+    },
+    {
+      "id": "5736a9f9-ed31-4952-8f9c-1b4ea9dc97a3",
+      "candidate_id": "b23d12ca-dca0-41cb-861d-cb77cab459cf",
+      "vacancy_id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 100000,
+      "start_at": 1804982400,
+      "created_at": 1778595273,
+      "status": "REJECTED_MNG"
+    },
+    {
+      "id": "650d6d2f-de4b-47e1-a715-48a44dc2465e",
+      "candidate_id": "9880ed96-8f4b-4708-8d2f-c915f1cb2918",
+      "vacancy_id": "34e7ff27-77c1-4259-b433-404fb2bf6ed8",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 100000000,
+      "start_at": 1798761600,
+      "created_at": 1778595151,
+      "status": "APPROVED_CND"
+    },
+    {
+      "id": "62c3e7c2-2687-4f1f-81fa-31ca360db9cd",
+      "candidate_id": "9193c890-72cb-4f27-8959-89630e33f779",
+      "vacancy_id": "d0ac97d3-673d-4039-8a2a-363861c309d1",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 100000,
+      "start_at": 1828569600,
+      "created_at": 1778594793,
+      "status": "REJECTED_CNF"
+    },
+    {
+      "id": "22dde80a-f54b-4916-ac43-1c70cdf669af",
+      "candidate_id": "8e5d0616-52ab-4cc6-bed0-5d48ceaa6159",
+      "vacancy_id": "4d07f391-5f20-4865-96f5-576c8b46714d",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 100000,
+      "start_at": 1780358400,
+      "created_at": 1778594302,
+      "status": "APPROVED_CND"
+    },
+    {
+      "id": "a0fe1fbd-1364-40b7-8704-c08abdad0be2",
+      "candidate_id": "43b4227b-550b-40e9-988f-7f023d62457e",
+      "vacancy_id": "689d0e52-cac3-4948-b8d0-b12a828486ae",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 9999000,
+      "start_at": 1778630400,
+      "created_at": 1778594196,
+      "status": "PENDING"
+    }
+  ]
+}

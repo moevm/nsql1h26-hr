@@ -1,9 +1,16 @@
-from fastapi import APIRouter, status, Depends, Query
-from neo4j import AsyncDriver
-from typing import Annotated
-from uuid import UUID
-from app.core.database import get_db
+#!/usr/bin/env python3
+import asyncio
+import sys
+import json
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from app.core.database import Neo4jDB
+from app.core.config import settings
+
 from app.models.system_backup import SystemBackup
+
 from app.repositories.user_repo import UserRepository
 from app.repositories.vacancy_repo import VacancyRepository
 from app.repositories.test_task_repo import TestTaskRepository
@@ -11,13 +18,14 @@ from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.interview_repo import InterviewRepository
 from app.repositories.offer_repo import OfferRepository
 from app.repositories.admin_repo import AdminRepository
+
 from app.services.admin_service import AdminService
-from app.core.security import require_role
-
-router = APIRouter()
 
 
-def get_admin_service(driver: AsyncDriver = Depends(get_db)) -> AdminService:
+async def seed():
+    await Neo4jDB.connect()
+    driver = Neo4jDB.get_driver()
+
     user_repo = UserRepository(driver)
     vacancy_repo = VacancyRepository(driver)
     test_task_repo = TestTaskRepository(driver)
@@ -25,7 +33,8 @@ def get_admin_service(driver: AsyncDriver = Depends(get_db)) -> AdminService:
     interview_repo = InterviewRepository(driver)
     offer_repo = OfferRepository(driver)
     admin_repo = AdminRepository(driver)
-    return AdminService(
+
+    service = AdminService(
         user_repo,
         vacancy_repo,
         test_task_repo,
@@ -35,20 +44,17 @@ def get_admin_service(driver: AsyncDriver = Depends(get_db)) -> AdminService:
         admin_repo
     )
 
+    is_empty = await service.is_empty()
+    if is_empty:
+        with open('backup.json', 'r', encoding='utf-8') as f:
+            backup = SystemBackup.model_validate_json(f.read())
+        await service.restore(backup)
+        print('DB Restored successfully')
+    else:
+        print('Database not empty, skipping initialization')
 
-@router.get("/backup", response_model=SystemBackup, status_code=status.HTTP_200_OK)
-async def backup(
-    admin_service: AdminService = Depends(get_admin_service),
-    _: dict = Depends(require_role("ADMIN")),
-):
-    return await admin_service.backup()
+    await Neo4jDB.close()
 
 
-@router.post("/restore", status_code=status.HTTP_200_OK)
-async def restore(
-    backup: SystemBackup,
-    admin_service: AdminService = Depends(get_admin_service),
-    _: dict = Depends(require_role("ADMIN")),
-):
-    await admin_service.restore(backup)
-    return {"status": "restored"}
+if __name__ == "__main__":
+    asyncio.run(seed())

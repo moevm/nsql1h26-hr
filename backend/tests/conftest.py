@@ -14,6 +14,7 @@ from app.repositories.test_task_repo import TestTaskRepository
 from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.interview_repo import InterviewRepository
 from app.repositories.offer_repo import OfferRepository
+from app.repositories.admin_repo import AdminRepository
 
 from app.services.user_service import UserService
 from app.services.test_task_service import TestTaskService
@@ -167,6 +168,11 @@ async def offer_repo(neo4j_driver):
     return OfferRepository(neo4j_driver)
 
 
+@pytest.fixture
+async def admin_repo(neo4j_driver):
+    return AdminRepository(neo4j_driver)
+
+
 # Service фикстуры
 
 
@@ -208,7 +214,13 @@ async def offer_service(offer_repo, candidate_repo, vacancy_repo):
 
 @pytest.fixture
 async def admin_service(
-    user_repo, vacancy_repo, test_task_repo, candidate_repo, interview_repo, offer_repo
+    user_repo,
+    vacancy_repo,
+    test_task_repo,
+    candidate_repo,
+    interview_repo,
+    offer_repo,
+    admin_repo,
 ):
     return AdminService(
         user_repo,
@@ -217,4 +229,5 @@ async def admin_service(
         candidate_repo,
         interview_repo,
         offer_repo,
+        admin_repo,
     )

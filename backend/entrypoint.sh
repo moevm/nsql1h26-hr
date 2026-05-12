@@ -5,6 +5,6 @@ while ! nc -z db 7687; do
 done
 echo "Neo4j started"
 
-cd scripts && python3 seed_users.py
+cd scripts && python3 seed.py
 cd ../
 python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
