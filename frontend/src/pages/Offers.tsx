@@ -24,6 +24,8 @@ export function Offers() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedOffers, setSelectedOffers] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     candidate_id: 'all',
@@ -41,7 +43,7 @@ export function Offers() {
 
   useEffect(() => {
     loadOffers();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadReferenceData() {
     try {
@@ -74,6 +76,10 @@ export function Offers() {
       if (filters.createdTo) {
         params.created_at_to = Math.floor(new Date(filters.createdTo).getTime() / 1000);
       }
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
+      }
       const response = await getOffers(params);
       setOffers(response.items);
       setTotal(response.total);
@@ -93,6 +99,12 @@ export function Offers() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -139,24 +151,33 @@ export function Offers() {
     ];
   }, [candidates, vacancies]);
 
+  const sortableFields = [
+    { value: 'salary', label: 'Зарплата' },
+    { value: 'start_at', label: 'Дата выхода' },
+    { value: 'status', label: 'Статус' },
+    { value: 'created_at', label: 'Дата создания' },
+    { value: 'candidate_name', label: 'Кандидат' },
+    { value: 'vacancy_title', label: 'Вакансия' },
+  ];
+
   const getStatusLabel = (status: string): string => {
     const statusMap: Record<string, string> = {
-      'PENDING': 'Ожидает',
-      'APPROVED_MNG': 'Согласован менеджером',
-      'REJECTED_MNG': 'Отклонён менеджером',
-      'APPROVED_CND': 'Принят кандидатом',
-      'REJECTED_CNF': 'Отклонён кандидатом',
+      PENDING: 'Ожидает',
+      APPROVED_MNG: 'Согласован менеджером',
+      REJECTED_MNG: 'Отклонён менеджером',
+      APPROVED_CND: 'Принят кандидатом',
+      REJECTED_CNF: 'Отклонён кандидатом',
     };
     return statusMap[status] || status;
   };
 
   const getStatusBadgeClass = (status: string): string => {
     const classMap: Record<string, string> = {
-      'PENDING': 'badge-warning',
-      'APPROVED_MNG': 'badge-success',
-      'REJECTED_MNG': 'badge-danger',
-      'APPROVED_CND': 'badge-success',
-      'REJECTED_CNF': 'badge-danger',
+      PENDING: 'badge-warning',
+      APPROVED_MNG: 'badge-success',
+      REJECTED_MNG: 'badge-danger',
+      APPROVED_CND: 'badge-success',
+      REJECTED_CNF: 'badge-danger',
     };
     return classMap[status] || 'badge';
   };
@@ -194,7 +215,18 @@ export function Offers() {
         </div>
       </div>
 
-      <FilterBar fields={filterFields} filters={filters} onFilterChange={handleFilterChange} onClear={handleClearFilters} hasActiveFilters={hasActiveFilters} isVisible={showFilters} />
+      <FilterBar
+        fields={filterFields}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
+      />
 
       {loading ? (
         <div>Загрузка...</div>
@@ -209,10 +241,10 @@ export function Offers() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет офферов"
             actions={o => (
-			  <button className="btn btn-sm" onClick={() => navigate(`/offers/${o.id}`)} title="Просмотр деталей">
-				👁️
-			  </button>
-			)}
+              <button className="btn btn-sm" onClick={() => navigate(`/offers/${o.id}`)} title="Просмотр деталей">
+                👁️
+              </button>
+            )}
           />
           {totalPages > 1 && (
             <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
@@ -231,7 +263,14 @@ export function Offers() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateOfferForm onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadOffers(); }} onCancel={() => setShowModal(false)} />
+            <CreateOfferForm
+              onSuccess={() => {
+                setShowModal(false);
+                setPagination({ limit: 20, offset: 0 });
+                loadOffers();
+              }}
+              onCancel={() => setShowModal(false)}
+            />
           </div>
         </div>
       )}

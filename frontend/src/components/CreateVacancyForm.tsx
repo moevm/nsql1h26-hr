@@ -1,4 +1,3 @@
-// CreateVacancyForm.tsx
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { createVacancy, updateVacancy, Vacancy } from '../api';

@@ -84,7 +84,6 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
         <h3>Запланировать интервью</h3>
       </div>
 
-      {/* Блок выбора/информации о кандидате */}
       {!preselectedCandidate ? (
         <div className="form-group">
           <label>Кандидат *</label>

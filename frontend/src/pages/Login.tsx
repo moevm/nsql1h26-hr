@@ -53,9 +53,7 @@ export function Login() {
       await createUser({ email, full_name, password, role });
       toast.success('Пользователь успешно зарегистрирован! Теперь войдите.');
       setShowRegisterModal(false);
-      // Очищаем форму
       setRegisterData({ email: '', full_name: '', password: '', role: 'HR' });
-      // Можно автоматически заполнить поля логина email'ом
       setEmail(email);
     } catch (err: any) {
       console.error(err);
@@ -124,7 +122,6 @@ export function Login() {
         </div>
       </div>
 
-      {/* Модальное окно регистрации */}
       {showRegisterModal && (
         <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>

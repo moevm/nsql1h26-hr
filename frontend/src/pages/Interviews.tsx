@@ -25,6 +25,8 @@ export function Interviews() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedInterviews, setSelectedInterviews] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     candidate_id: 'all',
@@ -41,7 +43,7 @@ export function Interviews() {
 
   useEffect(() => {
     loadInterviews();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadReferenceData() {
     try {
@@ -75,6 +77,10 @@ export function Interviews() {
         params.scheduled_at_to = Math.floor(new Date(filters.dateTo).getTime() / 1000);
       }
       if (filters.result !== 'all') params.result = filters.result;
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
+      }
       const response = await getInterviews(params);
       setInterviews(response.items);
       setTotal(response.total);
@@ -94,6 +100,12 @@ export function Interviews() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -138,32 +150,42 @@ export function Interviews() {
     ];
   }, [candidates, vacancies, techSpecs]);
 
+  const sortableFields = [
+    { value: 'scheduled_at', label: 'Дата интервью' },
+    { value: 'result', label: 'Результат' },
+    { value: 'candidate_name', label: 'Кандидат' },
+    { value: 'tech_spec_name', label: 'Интервьюер' },
+  ];
+
   const getResultLabel = (result: string): string => {
     const resultMap: Record<string, string> = {
-      'AWAIT_INTERVIEW': 'Ожидается',
-      'INTERVIEW_PASSED': 'Пройдено',
-      'INTERVIEW_FAILED': 'Не пройдено',
+      AWAIT_INTERVIEW: 'Ожидается',
+      INTERVIEW_PASSED: 'Пройдено',
+      INTERVIEW_FAILED: 'Не пройдено',
     };
     return resultMap[result] || result;
   };
 
   const getResultBadgeClass = (result: string): string => {
     const classMap: Record<string, string> = {
-      'AWAIT_INTERVIEW': 'badge-warning',
-      'INTERVIEW_PASSED': 'badge-success',
-      'INTERVIEW_FAILED': 'badge-danger',
+      AWAIT_INTERVIEW: 'badge-warning',
+      INTERVIEW_PASSED: 'badge-success',
+      INTERVIEW_FAILED: 'badge-danger',
     };
     return classMap[result] || 'badge';
   };
 
   const columns: Column<Interview>[] = [
     { key: 'candidate_id', header: 'Кандидат', render: i => candidates.find(c => c.id === i.candidate_id)?.full_name || '—' },
-    { key: 'vacancy_id', header: 'Вакансия', render: i => {
-		const candidate = candidates.find(c => c.id === i.candidate_id);
-		const vacancy = candidate && vacancies.find(v => v.id === candidate.vacancy_id);
-		return vacancy?.title || '—';
-	  }
-	},
+    {
+      key: 'vacancy_id',
+      header: 'Вакансия',
+      render: i => {
+        const candidate = candidates.find(c => c.id === i.candidate_id);
+        const vacancy = candidate && vacancies.find(v => v.id === candidate.vacancy_id);
+        return vacancy?.title || '—';
+      },
+    },
     { key: 'tech_spec_id', header: 'Интервьюер', render: i => techSpecs.find(t => t.id === i.tech_spec_id)?.full_name || '—' },
     { key: 'scheduled_at', header: 'Дата и время', render: i => new Date(i.scheduled_at * 1000).toLocaleString('ru-RU') },
     { key: 'result', header: 'Результат', render: i => <span className={`badge ${getResultBadgeClass(i.result)}`}>{getResultLabel(i.result)}</span> },
@@ -194,7 +216,18 @@ export function Interviews() {
         </div>
       </div>
 
-      <FilterBar fields={filterFields} filters={filters} onFilterChange={handleFilterChange} onClear={handleClearFilters} hasActiveFilters={hasActiveFilters} isVisible={showFilters} />
+      <FilterBar
+        fields={filterFields}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
+      />
 
       {loading ? (
         <div>Загрузка...</div>
@@ -209,10 +242,10 @@ export function Interviews() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет интервью"
             actions={i => (
-			  <button className="btn btn-sm" onClick={() => navigate(`/interviews/${i.id}`)} title="Просмотр деталей">
-				👁️
-			  </button>
-			)}
+              <button className="btn btn-sm" onClick={() => navigate(`/interviews/${i.id}`)} title="Просмотр деталей">
+                👁️
+              </button>
+            )}
           />
           {totalPages > 1 && (
             <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
@@ -231,7 +264,14 @@ export function Interviews() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateInterviewForm onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadInterviews(); }} onCancel={() => setShowModal(false)} />
+            <CreateInterviewForm
+              onSuccess={() => {
+                setShowModal(false);
+                setPagination({ limit: 20, offset: 0 });
+                loadInterviews();
+              }}
+              onCancel={() => setShowModal(false)}
+            />
           </div>
         </div>
       )}

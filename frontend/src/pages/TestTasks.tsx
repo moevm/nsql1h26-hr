@@ -1,24 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { DataTable, Column } from "../components/DataTable";
-import { FilterBar } from "../components/FilterBar";
-import { useFilters } from "../hooks/useFilters";
-import { FilterField } from "../types/filters";
-import { toast } from "sonner";
-import {
-  getTestTasks,
-  deleteTestTask,
-  getVacancies,
-  TestTask,
-  Vacancy,
-} from "../api";
-import { usePermissions } from "../hooks/usePermissions";
-import { CreateTestTaskForm } from "../components/CreateTestTaskForm";
-import "../styles/App.css";
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { DataTable, Column } from '../components/DataTable';
+import { FilterBar } from '../components/FilterBar';
+import { useFilters } from '../hooks/useFilters';
+import { FilterField } from '../types/filters';
+import { toast } from 'sonner';
+import { getTestTasks, deleteTestTask, getVacancies, TestTask, Vacancy } from '../api';
+import { usePermissions } from '../hooks/usePermissions';
+import { CreateTestTaskForm } from '../components/CreateTestTaskForm';
+import '../styles/App.css';
 
 export function TestTasks() {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const permissions = usePermissions(user?.role);
 
   const [assignments, setAssignments] = useState<TestTask[]>([]);
@@ -29,12 +23,14 @@ export function TestTasks() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
-    title: "",
-    vacancy_id: "all",
-    createdFrom: "",
-    createdTo: "",
+    title: '',
+    vacancy_id: 'all',
+    createdFrom: '',
+    createdTo: '',
   });
 
   useEffect(() => {
@@ -43,14 +39,14 @@ export function TestTasks() {
 
   useEffect(() => {
     loadTestTasks();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadVacancies() {
     try {
       const response = await getVacancies({ limit: 200 });
       setVacancies(response.items);
     } catch (err) {
-      console.error("Failed to load vacancies:", err);
+      console.error('Failed to load vacancies:', err);
     }
   }
 
@@ -62,22 +58,22 @@ export function TestTasks() {
         offset: pagination.offset,
       };
       if (filters.title) params.title = filters.title;
-      if (filters.vacancy_id !== "all") params.vacancy_id = filters.vacancy_id;
+      if (filters.vacancy_id !== 'all') params.vacancy_id = filters.vacancy_id;
       if (filters.createdFrom) {
-        params.created_at_from = Math.floor(
-          new Date(filters.createdFrom).getTime() / 1000,
-        );
+        params.created_at_from = Math.floor(new Date(filters.createdFrom).getTime() / 1000);
       }
       if (filters.createdTo) {
-        params.created_at_to = Math.floor(
-          new Date(filters.createdTo).getTime() / 1000,
-        );
+        params.created_at_to = Math.floor(new Date(filters.createdTo).getTime() / 1000);
+      }
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
       }
       const response = await getTestTasks(params);
       setAssignments(response.items);
       setTotal(response.total);
     } catch (err) {
-      toast.error("Ошибка загрузки тестовых заданий");
+      toast.error('Ошибка загрузки тестовых заданий');
       console.error(err);
     } finally {
       setLoading(false);
@@ -86,7 +82,7 @@ export function TestTasks() {
 
   const handleFilterChange = (key: string, value: any) => {
     updateFilter(key, value);
-    setPagination((prev) => ({ ...prev, offset: 0 }));
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleClearFilters = () => {
@@ -94,80 +90,67 @@ export function TestTasks() {
     setPagination({ limit: 20, offset: 0 });
   };
 
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
+  };
+
   const handleSelectAll = (checked: boolean) => {
-    setSelectedAssignments(checked ? assignments.map((a) => a.id) : []);
+    setSelectedAssignments(checked ? assignments.map(a => a.id) : []);
   };
 
   const handleSelectOne = (id: string, checked: boolean) => {
-    setSelectedAssignments((prev) =>
-      checked ? [...prev, id] : prev.filter((x) => x !== id),
-    );
+    setSelectedAssignments(prev => (checked ? [...prev, id] : prev.filter(x => x !== id)));
   };
 
   const handleBulkDelete = async () => {
     if (!permissions.canDeleteTestTask) {
-      toast.error("У вас нет прав на удаление тестовых заданий");
+      toast.error('У вас нет прав на удаление тестовых заданий');
       return;
     }
-    if (!window.confirm(`Удалить ${selectedAssignments.length} заданий?`))
-      return;
+    if (!window.confirm(`Удалить ${selectedAssignments.length} заданий?`)) return;
     try {
-      await Promise.all(selectedAssignments.map((id) => deleteTestTask(id)));
-      toast.success("Задания удалены");
+      await Promise.all(selectedAssignments.map(id => deleteTestTask(id)));
+      toast.success('Задания удалены');
       setSelectedAssignments([]);
       loadTestTasks();
     } catch (err) {
-      toast.error("Ошибка при удалении");
+      toast.error('Ошибка при удалении');
     }
   };
 
   const filterFields: FilterField[] = useMemo(() => {
-    const vacancyOptions = vacancies.map((v) => ({
-      value: v.id,
-      label: v.title,
-    }));
+    const vacancyOptions = vacancies.map(v => ({ value: v.id, label: v.title }));
     return [
-      {
-        key: "title",
-        label: "Название",
-        type: "text",
-        placeholder: "Название задания",
-      },
-      {
-        key: "vacancy_id",
-        label: "Вакансия",
-        type: "select",
-        options: vacancyOptions,
-      },
-      { key: "createdFrom", label: "Создано с", type: "date" },
-      { key: "createdTo", label: "Создано по", type: "date" },
+      { key: 'title', label: 'Название', type: 'text', placeholder: 'Название задания' },
+      { key: 'vacancy_id', label: 'Вакансия', type: 'select', options: vacancyOptions },
+      { key: 'createdFrom', label: 'Создано с', type: 'date' },
+      { key: 'createdTo', label: 'Создано по', type: 'date' },
     ];
   }, [vacancies]);
 
+  const sortableFields = [
+    { value: 'title', label: 'Название' },
+    { value: 'vacancy_id', label: 'Вакансия' },
+    { value: 'created_at', label: 'Дата создания' },
+  ];
+
   const columns: Column<TestTask>[] = [
-    { key: "title", header: "Название" },
+    { key: 'title', header: 'Название' },
     {
-      key: "test_task_url",
-      header: "Ссылка",
-      render: (a) =>
+      key: 'test_task_url',
+      header: 'Ссылка',
+      render: a =>
         a.test_task_url ? (
-          <a
-            href={a.test_task_url}
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-sm"
-          >
+          <a href={a.test_task_url} target="_blank" rel="noreferrer" className="btn btn-sm">
             Открыть
           </a>
         ) : (
-          "—"
+          '—'
         ),
     },
-    {
-      key: "vacancy_id",
-      header: "Вакансия",
-      render: (a) => vacancies.find((v) => v.id === a.vacancy_id)?.title || "—",
-    },
+    { key: 'vacancy_id', header: 'Вакансия', render: a => vacancies.find(v => v.id === a.vacancy_id)?.title || '—' },
   ];
 
   const totalPages = Math.ceil(total / pagination.limit);
@@ -178,19 +161,16 @@ export function TestTasks() {
       <div className="page-header">
         <h2>Тестовые задания {total > 0 && `(${total})`}</h2>
         <div className="btn-group">
-          {selectedAssignments.length > 0  && permissions.canDeleteTestTask && (
+          {selectedAssignments.length > 0 && permissions.canDeleteTestTask && (
             <button className="btn btn-danger" onClick={handleBulkDelete}>
               🗑️ Удалить ({selectedAssignments.length})
-            </button> 
-          	)}
+            </button>
+          )}
           <button className="btn" onClick={() => setShowFilters(!showFilters)}>
-            🔍 Фильтры {hasActiveFilters && "●"}
+            🔍 Фильтры {hasActiveFilters && '●'}
           </button>
           {permissions.canCreateTestTask && (
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowModal(true)}
-            >
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               ➕ Добавить задание
             </button>
           )}
@@ -204,6 +184,10 @@ export function TestTasks() {
         onClear={handleClearFilters}
         hasActiveFilters={hasActiveFilters}
         isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
       />
 
       {loading ? (
@@ -213,56 +197,24 @@ export function TestTasks() {
           <DataTable
             columns={columns}
             data={assignments}
-            keyExtractor={(a) => a.id}
+            keyExtractor={a => a.id}
             selectedIds={selectedAssignments}
             onSelect={handleSelectOne}
             onSelectAll={handleSelectAll}
             emptyMessage="Нет тестовых заданий"
-            actions={(a) => (
-              <button
-                className="btn btn-sm"
-                onClick={() => navigate(`/vacancies/${a.vacancy_id}`)}
-                title="Просмотр деталей"
-              >
+            actions={a => (
+              <button className="btn btn-sm" onClick={() => navigate(`/vacancies/${a.vacancy_id}`)} title="Просмотр деталей">
                 👁️
               </button>
             )}
           />
           {totalPages > 1 && (
-            <div
-              className="pagination"
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: "0.5rem",
-                marginTop: "1rem",
-              }}
-            >
-              <button
-                className="btn btn-sm"
-                disabled={pagination.offset === 0}
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    offset: prev.offset - prev.limit,
-                  }))
-                }
-              >
+            <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
+              <button className="btn btn-sm" disabled={pagination.offset === 0} onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset - prev.limit }))}>
                 ← Назад
               </button>
-              <span style={{ padding: "0.25rem 0.5rem" }}>
-                Страница {currentPage} из {totalPages}
-              </span>
-              <button
-                className="btn btn-sm"
-                disabled={pagination.offset + pagination.limit >= total}
-                onClick={() =>
-                  setPagination((prev) => ({
-                    ...prev,
-                    offset: prev.offset + prev.limit,
-                  }))
-                }
-              >
+              <span style={{ padding: '0.25rem 0.5rem' }}>Страница {currentPage} из {totalPages}</span>
+              <button className="btn btn-sm" disabled={pagination.offset + pagination.limit >= total} onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset + prev.limit }))}>
                 Вперёд →
               </button>
             </div>
@@ -272,7 +224,7 @@ export function TestTasks() {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <CreateTestTaskForm
               vacancies={vacancies}
               onSuccess={() => {

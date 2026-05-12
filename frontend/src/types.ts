@@ -1,31 +1,28 @@
-// src/types.ts
-
 // ========== Пользователи ==========
 export type UserRole = "ADMIN" | "HR" | "TECH_SPEC" | "MANAGER";
 
 export interface User {
-  id: string; // user_id
+  id: string;
   email: string;
   full_name: string;
   role: UserRole;
-  // password_hash не включаем в ответы API
 }
 
 // ========== Вакансии ==========
 export type VacancyStatus = "OPEN" | "CLOSED";
 
 export interface Vacancy {
-  id: string; // vacancy_id
+  id: string; 
   title: string;
   description: string;
   status: VacancyStatus;
-  created_at: number; // Unix timestamp (секунды)
-  closed_at?: number; // Unix timestamp, только если статус CLOSED
+  created_at: number;
+  closed_at?: number;
 }
 
 // ========== Тестовые задания ==========
 export interface TestTask {
-  id: string; // task_id
+  id: string;
   title: string;
   test_task_url: string;
   vacancy_id: string; // связь с вакансией
@@ -42,14 +39,14 @@ export type CandidateStatus =
   | "HIRED";
 
 export interface Candidate {
-  id: string; // candidate_id
+  id: string;
   full_name: string;
   email: string;
   phone: string;
   resume_url?: string;
   status: CandidateStatus;
-  vacancy_id: string; // связь APPLIES: Candidate → Vacancy (одна вакансия? В API указано vacancy_id)
-  test_task_id?: string; // связь COMPLETES: Candidate → TestTask (опционально)
+  vacancy_id: string; 
+  test_task_id?: string; 
 }
 
 // ========== Интервью ==========
@@ -59,10 +56,10 @@ export type InterviewResult =
   | "INTERVIEW_FAILED";
 
 export interface Interview {
-  id: string; // interview_id
+  id: string;
   candidate_id: string;
-  tech_spec_id: string; // ID пользователя с ролью TECH_SPEC
-  scheduled_at: number; // Unix timestamp
+  tech_spec_id: string; 
+  scheduled_at: number;
   zoom_url?: string;
   feedback?: string;
   result: InterviewResult;
@@ -77,12 +74,12 @@ export type OfferStatus =
   | "REJECTED_CNF";
 
 export interface Offer {
-  id: string; // offer_id
+  id: string;
   candidate_id: string;
   vacancy_id: string;
-  created_by: string; // ID пользователя (MANAGER/HR/ADMIN)
+  created_by: string; 
   salary: number;
-  start_at: number; // Unix timestamp — дата выхода
+  start_at: number; 
   status: OfferStatus;
 }
 
@@ -90,7 +87,7 @@ export interface Offer {
 export type FilterFieldType = "text" | "select" | "date" | "datetime-local";
 
 export interface FilterField {
-  key: string; // ключ в объекте filters
+  key: string; 
   label: string;
   type: FilterFieldType;
   placeholder?: string;
