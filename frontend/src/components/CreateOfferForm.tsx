@@ -87,7 +87,7 @@ export function CreateOfferForm({ onSuccess, onCancel, preselectedCandidate }: C
             <option value="">Выберите кандидата</option>
             {candidates.map(c => (
               <option key={c.id} value={c.id}>
-                {c.full_name} — {c.status}
+                {c.full_name}
               </option>
             ))}
           </select>
