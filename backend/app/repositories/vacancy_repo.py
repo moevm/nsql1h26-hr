@@ -72,7 +72,12 @@ class VacancyRepository:
             query_base = f"MATCH (v:Vacancy{label_filter})"
 
             where_clauses = []
-            params = {"limit": filters.limit, "offset": filters.offset}
+            params = {
+                "limit": filters.limit,
+                "offset": filters.offset,
+                "sort_by": filters.sort_by.value,
+                "sort_order": filters.sort_order,
+            }
 
             if filters.title:
                 where_clauses.append("toLower(v.title) CONTAINS toLower($title)")
@@ -102,33 +107,35 @@ class VacancyRepository:
 
             where_str = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
-            sort_by = filters.sort_by
-            sort_order = filters.sort_order
+            order_by = """
+            ORDER BY
+                CASE WHEN $sort_by = 'title' THEN v.title END {sort_order},
+                CASE WHEN $sort_by = 'status' THEN status END {sort_order},
+                CASE WHEN $sort_by = 'created_at' THEN v.created_at END {sort_order},
+                CASE WHEN $sort_by = 'closed_at' THEN v.closed_at END {sort_order}
+            """.replace("{sort_order}", filters.sort_order)
             # TODO: modify query as in TEST TASK REPO
             full_query = f"""
             {query_base}
             {where_str}
-            WITH count(v) AS total_count
-            {query_base}
-            {where_str}
-            RETURN total_count, v {{
+            WITH v, [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0] AS status
+            {order_by}
+            WITH count(v) AS total_count, collect(v {{
                 .*,
                 status: [label IN labels(v) WHERE label IN ['OPEN', 'CLOSED']][0]
-            }} AS vacancy_data
-            ORDER BY v.{sort_by} {sort_order}
-            SKIP $offset
-            LIMIT $limit
+            }}) AS items
+            RETURN total_count, items[$offset..$offset + $limit] AS vacancy_data
             """
 
             result = await session.run(full_query, **params)
-            records = await result.data()
+            record = await result.single()
 
-            if not records:
+            if not record:
                 return {"total": 0, "items": []}
 
             return {
-                "total": records[0]["total_count"],
-                "items": [r["vacancy_data"] for r in records],
+                "total": record["total_count"],
+                "items": record["vacancy_data"] or []
             }
 
     async def restore_vacancy(self, vacancy: VacancyResponse) -> dict:
@@ -139,7 +146,8 @@ class VacancyRepository:
                     id: $id,
                     title: $title,
                     description: $description,
-                    created_at: $created_at
+                    created_at: $created_at,
+                    closed_at: $closed_at
                 }})
                 RETURN v {{
             .*,
@@ -150,6 +158,7 @@ class VacancyRepository:
                 title=vacancy.title,
                 description=vacancy.description,
                 created_at=vacancy.created_at,
+                closed_at=vacancy.closed_at,
             )
             record = await result.single()
             return record["vacancy_data"] if record else None
