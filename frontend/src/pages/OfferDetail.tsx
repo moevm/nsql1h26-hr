@@ -11,6 +11,7 @@ import {
   Candidate,
   Vacancy,
 } from '../api';
+import { CreateOfferForm } from '../components/CreateOfferForm';
 import { usePermissions } from '../hooks/usePermissions';
 
 export function OfferDetail() {
@@ -23,6 +24,7 @@ export function OfferDetail() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -101,6 +103,21 @@ export function OfferDetail() {
     }
   }
 
+  async function handleDelete() {
+    if (!permissions.canDeleteOffer) {
+      toast.error('Нет прав');
+      return;
+    }
+    if (!confirm('Удалить оффер?')) return;
+    try {
+      await deleteOffer(offer!.id);
+      toast.success('Оффер удалён');
+      navigate('/offers');
+    } catch (err) {
+      toast.error('Ошибка удаления');
+    }
+  }
+
   if (loading) return <div className="content">Загрузка...</div>;
   if (!offer) return <div className="content">Оффер не найден</div>;
 
@@ -118,13 +135,20 @@ export function OfferDetail() {
     return map[status] || status;
   };
 
+  const canEditOffer = permissions.canEditVacancy; // HR/ADMIN могут редактировать
+
   return (
     <div className="content">
       <div className="detail-page">
         <div className="detail-header">
           <h2>Оффер</h2>
           <div className="detail-actions">
-            {/* <button className="btn btn-danger" onClick={handleDelete}>🗑️ Удалить</button> */}
+            {canEditOffer && offer.status === 'PENDING' && (
+              <button className="btn btn-primary" onClick={() => setShowEditModal(true)}>✏️ Редактировать</button>
+            )}
+            {permissions.canDeleteOffer && (
+              <button className="btn btn-danger" onClick={handleDelete}>🗑️ Удалить</button>
+            )}
             <button className="btn" onClick={() => navigate('/offers')}>← Назад</button>
           </div>
         </div>
@@ -191,6 +215,18 @@ export function OfferDetail() {
           </div>
         )}
       </div>
+
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <CreateOfferForm
+              initialData={offer}
+              onSuccess={() => { setShowEditModal(false); loadData(); }}
+              onCancel={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
