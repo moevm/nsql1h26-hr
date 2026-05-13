@@ -1,5 +1,5 @@
 from fastapi import Request, status
-from fastapi.responses import JSONResponse # Добавьте этот импорт
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.security import decode_token
 
@@ -25,7 +25,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            # Вместо raise используем return JSONResponse
+
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "Missing or invalid authorization token"},
@@ -38,7 +38,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             payload = decode_token(token)
             request.state.user = payload
         except Exception as e:
-            # Здесь также возвращаем JSONResponse
+
             return JSONResponse(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 content={"detail": "Invalid or expired token"},

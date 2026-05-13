@@ -68,3 +68,10 @@ class InterviewFilterResponse(BaseModel):
 class InterviewPatch(BaseModel):
     feedback: str = Field(min_length=1, max_length=2000)
     result: InterviewResult
+    
+class InterviewUpdate(BaseModel):
+    tech_spec_id: UUID | None = None
+    scheduled_at: UnixTimestamp | None = None
+    zoom_url: HttpUrl | None = None
+
+    model_config = ConfigDict(from_attributes=True)

@@ -10,9 +10,11 @@ from app.models.interview import (
     InterviewFilterResponse,
     InterviewPatch,
     InterviewResult,
+    InterviewUpdate
 )
 from app.models.candidate import CandidateStatus
 from app.core.exceptions import AppError
+from pydantic import HttpUrl
 
 
 class InterviewService:
@@ -66,15 +68,20 @@ class InterviewService:
                 "scheduled_at_from must be <= scheduled_at_to",
                 status.HTTP_400_BAD_REQUEST,
             )
+                    
         result = await self.interview_repo.filter_interviews(filters)
         return result
 
     async def patch_interview(
-        self, interview_id: UUID, patch: InterviewPatch
+        self, interview_id: UUID, patch: InterviewPatch, current_user: dict
     ) -> InterviewResponse:
         interview = await self.interview_repo.get_interview_by_id(interview_id)
         if not interview:
             raise AppError("interview not found", status.HTTP_404_NOT_FOUND)
+        if current_user.get("role") == "TECH_SPEC" and str(interview.tech_spec_id) != current_user["sub"]:
+            raise AppError(
+                "Access denied", status.HTTP_403_FORBIDDEN
+            )
         patch_raw = patch.model_dump()
         patched_interview = await self.interview_repo.patch_interview(
             interview_id, patch_raw
@@ -88,3 +95,27 @@ class InterviewService:
                 patched_interview.candidate_id, {"status": CandidateStatus.REJECTED}
             )
         return patched_interview
+        
+
+    async def update_interview(self, interview_id: UUID, update_data: InterviewUpdate) -> InterviewResponse:
+        existing = await self.interview_repo.get_interview_by_id(interview_id)
+        if not existing:
+            raise AppError("Interview not found", status.HTTP_404_NOT_FOUND)
+
+        if update_data.tech_spec_id:
+            tech_spec = await self.user_repo.get_user_by_id(update_data.tech_spec_id)
+            if not tech_spec or tech_spec.role != "TECH_SPEC":
+                raise AppError("Tech spec not found or user is not TECH_SPEC", status.HTTP_400_BAD_REQUEST)
+
+        patch_dict = update_data.model_dump(exclude_none=True)
+        for key, value in patch_dict.items():
+            if isinstance(value, UUID):
+                patch_dict[key] = str(value)
+            elif isinstance(value, HttpUrl):
+                patch_dict[key] = str(value)
+
+        if not patch_dict:
+            return existing
+
+        updated = await self.interview_repo.update_interview(interview_id, patch_dict)
+        return updated

@@ -6,6 +6,7 @@ from app.models.interview import (
     InterviewFilter,
     InterviewFilterResponse,
     InterviewPatch,
+    InterviewUpdate
 )
 
 
@@ -218,3 +219,35 @@ class InterviewRepository:
             if not record:
                 return None
             return InterviewResponse(**record["interview_data"])
+            
+    async def update_interview(self, interview_id: UUID, update_data: dict) -> InterviewResponse:
+        async with self.driver.session() as session:
+            set_fields = []
+            params = {"id": str(interview_id)}
+            if "scheduled_at" in update_data:
+                set_fields.append("i.scheduled_at = $scheduled_at")
+                params["scheduled_at"] = update_data["scheduled_at"]
+            if "zoom_url" in update_data:
+                set_fields.append("i.zoom_url = $zoom_url")
+                params["zoom_url"] = update_data["zoom_url"]
+
+            if set_fields:
+                set_clause = "SET " + ", ".join(set_fields)
+                query_update = f"""
+                MATCH (i:Interview {{id: $id}})
+                {set_clause}
+                """
+                await session.run(query_update, **params)
+
+            if "tech_spec_id" in update_data:
+                tech_spec_id = update_data["tech_spec_id"]
+                query_tech = """
+                MATCH (i:Interview {id: $id})
+                MATCH (newTech:User:TECH_SPEC {id: $tech_spec_id})
+                OPTIONAL MATCH (i)<-[old:INTERVIEWING]-(oldTech:User:TECH_SPEC)
+                DELETE old
+                CREATE (newTech)-[:INTERVIEWING]->(i)
+                """
+                await session.run(query_tech, id=str(interview_id), tech_spec_id=tech_spec_id)
+
+            return await self.get_interview_by_id(interview_id)
