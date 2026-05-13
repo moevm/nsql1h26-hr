@@ -13,7 +13,8 @@ from app.models.offer import (
     OfferResponse,
     OfferFilter,
     OfferFilterResponse,
-    OfferPatch
+    OfferPatch,
+    OfferUpdate
 )
 from app.core.security import require_role
 
@@ -63,3 +64,13 @@ async def patch_offer(
 ):
     offer = await offer_service.patch_offer(offer_id, patch_data)
     return offer
+   
+    
+@router.patch("/{offer_id}/admin", response_model=OfferResponse, status_code=status.HTTP_200_OK)
+async def admin_update_offer(
+    offer_id: UUID,
+    update_data: OfferUpdate,
+    offer_service: OfferService = Depends(get_offer_service),
+    _: dict = Depends(require_role("HR")),  
+):
+    return await offer_service.update_offer(offer_id, update_data)

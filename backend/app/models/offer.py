@@ -80,3 +80,10 @@ class OfferFilterResponse(BaseModel):
     items: list[OfferResponse]
 
     model_config = ConfigDict(from_attributes=True)
+    
+    
+class OfferUpdate(BaseModel):
+    salary: NonNegativeInt | None = None
+    start_at: UnixTimestamp | None = None
+
+    model_config = ConfigDict(from_attributes=True)

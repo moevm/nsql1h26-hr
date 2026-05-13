@@ -10,6 +10,7 @@ from app.models.offer import (
     OfferFilterResponse,
     OfferStatus,
     OfferPatch,
+    OfferUpdate
 )
 from app.models.vacancy import VacancyStatus
 from app.models.candidate import CandidateStatus
@@ -59,6 +60,25 @@ class OfferService:
 
     async def filter_offers(self, filters: OfferFilter) -> OfferFilterResponse:
         return await self.offer_repo.filter_offers(filters)
+    
+    async def update_offer(self, offer_id: UUID, update_data: OfferUpdate) -> OfferResponse:
+        existing = await self.offer_repo.get_offer_by_id(offer_id)
+        if not existing:
+            raise AppError("Offer not found", status.HTTP_404_NOT_FOUND)
+
+        patch_dict = update_data.model_dump(exclude_none=True)
+        for key, value in patch_dict.items():
+            if isinstance(value, UUID):
+                patch_dict[key] = str(value)
+                
+        if not patch_dict:
+            return existing
+
+        if existing.status != OfferStatus.PENDING:
+            raise AppError("Can only edit offer while it is in PENDING status", status.HTTP_400_BAD_REQUEST)
+
+        updated = await self.offer_repo.update_offer(offer_id, patch_dict)
+        return updated
 
     async def patch_offer(self, offer_id: UUID, patch: OfferPatch) -> OfferResponse:
         offer = await self.offer_repo.get_offer_by_id(offer_id)

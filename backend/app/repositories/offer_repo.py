@@ -7,6 +7,7 @@ from app.models.offer import (
     OfferFilterResponse,
     OfferStatus,
     OfferPatch,
+    OfferUpdate
 )
 
 
@@ -204,6 +205,28 @@ class OfferRepository:
                 else []
             )
             return OfferFilterResponse(total=record["total_count"], items=items)
+        
+    async def update_offer(self, offer_id: UUID, update_data: dict) -> OfferResponse:
+        async with self.driver.session() as session:
+            set_clause = ", ".join([f"o.{key} = ${key}" for key in update_data.keys()])
+            query = f"""
+            MATCH (u:User)-[:CREATES]->(o:Offer {{id: $id}})
+            MATCH (o)-[:OFFERED]->(c:Candidate)
+            MATCH (o)-[:CLOSES]->(v:Vacancy)
+            SET {set_clause}
+            RETURN o {{
+                .*,
+                status: [label IN labels(o) WHERE label IN [{self.statuses}]][0],
+                candidate_id: c.id,
+                vacancy_id: v.id,
+                created_by: u.id
+            }} AS offer_data
+            """
+            result = await session.run(query, id=str(offer_id), **update_data)
+            record = await result.single()
+            if not record:
+                return None
+            return OfferResponse(**record["offer_data"])
 
     async def restore_offer(self, offer: OfferResponse) -> OfferResponse:
         async with self.driver.session() as session:
