@@ -23,7 +23,7 @@ services:
       - VITE_HOST=0.0.0.0
       - VITE_API_URL=${VITE_API_URL:-http://localhost:8000/api/v2}
     ports:
-      - "${FRONTEND_HOST:-127.0.0.1}:${FRONTEND_PORT:-5173}:5173"
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend-service
     networks:
@@ -37,7 +37,7 @@ services:
       args:
         - SECRET_KEY=${SECRET_KEY}
     ports:
-      - "${BACKEND_HOST:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     environment:
       - NEO4J_USER=${NEO4J_USER}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
