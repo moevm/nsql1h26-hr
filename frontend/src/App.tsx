@@ -12,6 +12,7 @@ import { CandidateDetail } from "./pages/CandidateDetail";
 import { VacancyDetail } from "./pages/VacancyDetail";
 import { InterviewDetail } from "./pages/InterviewDetail";
 import { OfferDetail } from "./pages/OfferDetail";
+import { TestTaskDetail } from './pages/TestTaskDetail';
 import "./styles/App.css";
 
 // Временная проверка авторизации
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/vacancies/:id" element={<VacancyDetail />} />
           <Route path="/interviews/:id" element={<InterviewDetail />} />
           <Route path="/offers/:id" element={<OfferDetail />} />
+          <Route path="/test-tasks/:id" element={<TestTaskDetail />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

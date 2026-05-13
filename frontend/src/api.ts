@@ -204,6 +204,10 @@ export async function getTestTasks(params?: {
   return apiRequest(`/test-tasks${query}`);
 }
 
+export async function getTestTaskById(id: string): Promise<TestTask> {
+  return apiRequest(`/test-tasks/${id}`);
+}
+
 export async function createTestTask(data: {
   title: string;
   test_task_url: string;
@@ -350,6 +354,20 @@ export async function deleteInterview(id: string): Promise<void> {
   return apiRequest(`/interviews/${id}`, { method: 'DELETE' });
 }
 
+export async function updateInterviewAdmin(
+  id: string,
+  data: {
+    tech_spec_id?: string;
+    scheduled_at?: number;
+    zoom_url?: string;
+  }
+): Promise<Interview> {
+  return apiRequest(`/interviews/${id}/admin`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 // ---------- Offers ----------
 export interface Offer {
   id: string;
@@ -403,6 +421,19 @@ export async function updateOfferStatus(
   return apiRequest(`/offers/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function updateOfferAdmin(
+  id: string,
+  data: {
+    salary?: number;
+    start_at?: number;
+  }
+): Promise<Offer> {
+  return apiRequest(`/offers/${id}/admin`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }
 

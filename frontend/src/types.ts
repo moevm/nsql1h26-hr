@@ -25,7 +25,7 @@ export interface TestTask {
   id: string;
   title: string;
   test_task_url: string;
-  vacancy_id: string; // связь с вакансией
+  vacancy_id: string; 
 }
 
 // ========== Кандидаты ==========
