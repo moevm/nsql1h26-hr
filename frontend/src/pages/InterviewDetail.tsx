@@ -14,6 +14,7 @@ import {
   User,
 } from '../api';
 import { usePermissions } from '../hooks/usePermissions';
+import { CreateInterviewForm } from '../components/CreateInterviewForm';
 
 export function InterviewDetail() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export function InterviewDetail() {
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [techSpecs, setTechSpecs] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [result, setResult] = useState<'INTERVIEW_PASSED' | 'INTERVIEW_FAILED'>('INTERVIEW_PASSED');
 
@@ -99,6 +101,9 @@ export function InterviewDetail() {
         <div className="detail-header">
           <h2>Интервью</h2>
           <div className="detail-actions">
+            {(
+				<button className="btn btn-primary" onClick={() => setShowEditModal(true)}>✏️ Редактировать</button>
+			)}
             {/* permissions.canDeleteInterview && (
               <button className="btn btn-danger" onClick={handleDelete}>🗑️ Удалить</button>
             )*/}
@@ -129,7 +134,7 @@ export function InterviewDetail() {
             </div>
             <div className="info-item">
               <strong>Дата и время</strong>
-              <span>{new Date(interview.scheduled_at * 1000).toLocaleString()}</span>
+              <span>{new Date(interview.scheduled_at * 1000).toLocaleString('ru-RU')}</span>
             </div>
             <div className="info-item">
               <strong>Ссылка на встречу</strong>
@@ -148,7 +153,7 @@ export function InterviewDetail() {
             <div className="feedback-form">
               <div className="form-group">
                 <label>Результат интервью</label>
-                <select value={result} onChange={e => setResult(e.target.value as any)} disabled={!permissions.canEditInterview}>
+                <select value={result} onChange={e => setResult(e.target.value as any)} disabled={!permissions.canEditInterview || user.id !== interview.tech_spec_id}>
                   <option value="INTERVIEW_PASSED">Пройдено</option>
                   <option value="INTERVIEW_FAILED">Не пройдено</option>
                 </select>
@@ -159,17 +164,29 @@ export function InterviewDetail() {
                   rows={5}
                   value={feedback}
                   onChange={e => setFeedback(e.target.value)}
-                  disabled={!permissions.canEditInterview}
+                  disabled={!permissions.canEditInterview || user.id !== interview.tech_spec_id}
                   placeholder="Введите фидбек по интервью..."
                 />
               </div>
-              {permissions.canEditInterview && (
+              {permissions.canEditInterview && user.id === interview.tech_spec_id && (
                 <button className="btn btn-primary" onClick={handleSaveFeedback}>Сохранить фидбек</button>
               )}
             </div>
           </div>
         )}
       </div>
+      
+      {showEditModal && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <CreateInterviewForm
+              initialData={interview}
+              onSuccess={() => { setShowEditModal(false); loadData(); }}
+              onCancel={() => setShowEditModal(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,18 +1,37 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { createInterview, getCandidates, getUsers, Candidate, User } from '../api';
+import { createInterview, updateInterviewAdmin, getCandidates, getCandidateById, getUsers, Candidate, User, Interview } from '../api';
+
+function formatLocalDatetime(timestamp: number | undefined): string {
+  if (!timestamp) return '';
+  const date = new Date(timestamp * 1000);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Всё остальное (handleSubmit, getMinDateTime и т.д.) остаётся без изменений.
 
 interface CreateInterviewFormProps {
   onSuccess: () => void;
   onCancel: () => void;
-  preselectedCandidate?: Candidate; // если передан – кандидат фиксирован
+  preselectedCandidate?: Candidate;
+  initialData?: Interview;
 }
 
-export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate }: CreateInterviewFormProps) {
-  const [candidateId, setCandidateId] = useState(preselectedCandidate?.id || '');
-  const [techSpecId, setTechSpecId] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [zoomUrl, setZoomUrl] = useState('');
+export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate, initialData }: CreateInterviewFormProps) {
+  const isEdit = !!initialData;
+  const [candidateId, setCandidateId] = useState(initialData?.candidate_id || preselectedCandidate?.id || '');
+  const [candidateName, setCandidateName] = useState(preselectedCandidate?.full_name || '');
+  const [techSpecId, setTechSpecId] = useState(initialData?.tech_spec_id || '');
+  const [scheduledAt, setScheduledAt] = useState(
+  initialData?.scheduled_at ? formatLocalDatetime(initialData.scheduled_at) : ''
+  );
+
+  const [zoomUrl, setZoomUrl] = useState(initialData?.zoom_url || '');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [techSpecs, setTechSpecs] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,7 +44,7 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
   async function loadData() {
     try {
       const promises = [];
-      if (!preselectedCandidate) {
+      if (!preselectedCandidate && !isEdit) {
         promises.push(getCandidates({ limit: 200 }));
       } else {
         promises.push(Promise.resolve({ items: [] }));
@@ -33,8 +52,13 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
       promises.push(getUsers({ role: 'TECH_SPEC', limit: 200 }));
 
       const [candidatesRes, usersRes] = await Promise.all(promises);
-      if (!preselectedCandidate) setCandidates(candidatesRes.items);
+      if (!preselectedCandidate && !isEdit) setCandidates(candidatesRes.items);
       setTechSpecs(usersRes.items);
+
+      if (isEdit && candidateId) {
+        const cand = await getCandidateById(candidateId);
+        setCandidateName(cand.full_name);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Не удалось загрузить данные');
@@ -45,28 +69,33 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalCandidateId = preselectedCandidate?.id || candidateId;
-    if (!finalCandidateId) return toast.error('Выберите кандидата');
+    const finalCandidateId = candidateId;
+    if (!finalCandidateId) return toast.error('Кандидат не выбран');
     if (!techSpecId) return toast.error('Выберите технического специалиста');
     if (!scheduledAt) return toast.error('Укажите дату и время');
 
     setLoading(true);
     try {
-      await createInterview({
-        candidate_id: finalCandidateId,
-        tech_spec_id: techSpecId,
-        scheduled_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
-        zoom_url: zoomUrl || undefined,
-      });
-      toast.success('Интервью успешно запланировано');
+      if (isEdit && initialData) {
+        await updateInterviewAdmin(initialData.id, {
+          tech_spec_id: techSpecId,
+          scheduled_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
+          zoom_url: zoomUrl || undefined,
+        });
+        toast.success('Интервью обновлено');
+      } else {
+        await createInterview({
+          candidate_id: finalCandidateId,
+          tech_spec_id: techSpecId,
+          scheduled_at: Math.floor(new Date(scheduledAt).getTime() / 1000),
+          zoom_url: zoomUrl || undefined,
+        });
+        toast.success('Интервью успешно запланировано');
+      }
       onSuccess();
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes('400')) {
-        toast.error('Кандидат не в статусе TEST или технический специалист не найден');
-      } else {
-        toast.error('Ошибка при создании интервью');
-      }
+      toast.error(isEdit ? 'Ошибка обновления' : 'Ошибка при создании интервью');
     } finally {
       setLoading(false);
     }
@@ -81,16 +110,16 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
   return (
     <form onSubmit={handleSubmit}>
       <div className="modal-header">
-        <h3>Запланировать интервью</h3>
+        <h3>{isEdit ? 'Редактирование интервью' : 'Запланировать интервью'}</h3>
       </div>
 
-      {!preselectedCandidate ? (
+      {!preselectedCandidate && !isEdit ? (
         <div className="form-group">
           <label>Кандидат *</label>
-          <select 
-            value={candidateId} 
-            onChange={e => setCandidateId(e.target.value)} 
-            required 
+          <select
+            value={candidateId}
+            onChange={e => setCandidateId(e.target.value)}
+            required
             disabled={loading || loadingData}
           >
             <option value="">Выберите кандидата</option>
@@ -100,18 +129,18 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
           </select>
           {loadingData && <small>Загрузка кандидатов...</small>}
         </div>
-      ) : (
+      ) : ((preselectedCandidate && !isEdit) || isEdit) && (
         <div className="info-box" style={{ background: '#f0fdf4', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #bbf7d0' }}>
-          <strong>Кандидат:</strong> {preselectedCandidate.full_name}
+          <strong>Кандидат:</strong> {preselectedCandidate?.full_name || candidateName}
         </div>
       )}
 
       <div className="form-group">
         <label>Технический специалист *</label>
-        <select 
-          value={techSpecId} 
-          onChange={e => setTechSpecId(e.target.value)} 
-          required 
+        <select
+          value={techSpecId}
+          onChange={e => setTechSpecId(e.target.value)}
+          required
           disabled={loading || loadingData}
         >
           <option value="">Выберите специалиста</option>
@@ -123,11 +152,11 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
 
       <div className="form-group">
         <label>Дата и время *</label>
-        <input 
-          type="datetime-local" 
-          value={scheduledAt} 
-          onChange={e => setScheduledAt(e.target.value)} 
-          required 
+        <input
+          type="datetime-local"
+          value={scheduledAt}
+          onChange={e => setScheduledAt(e.target.value)}
+          required
           disabled={loading}
           min={getMinDateTime()}
         />
@@ -135,10 +164,10 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
 
       <div className="form-group">
         <label>Ссылка на Zoom (опционально)</label>
-        <input 
-          type="url" 
-          value={zoomUrl} 
-          onChange={e => setZoomUrl(e.target.value)} 
+        <input
+          type="url"
+          value={zoomUrl}
+          onChange={e => setZoomUrl(e.target.value)}
           placeholder="https://zoom.us/j/..."
           disabled={loading}
         />
@@ -147,7 +176,7 @@ export function CreateInterviewForm({ onSuccess, onCancel, preselectedCandidate 
       <div className="form-actions">
         <button type="button" className="btn" onClick={onCancel} disabled={loading}>Отмена</button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Создание...' : 'Запланировать интервью'}
+          {loading ? (isEdit ? 'Сохранение...' : 'Создание...') : (isEdit ? 'Сохранить' : 'Запланировать')}
         </button>
       </div>
     </form>
