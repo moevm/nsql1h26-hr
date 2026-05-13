@@ -203,7 +203,7 @@ export function TestTasks() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет тестовых заданий"
             actions={a => (
-              <button className="btn btn-sm" onClick={() => navigate(`/vacancies/${a.vacancy_id}`)} title="Просмотр деталей">
+              <button className="btn btn-sm" onClick={() => navigate(`/test-tasks/${a.id}`)} title="Просмотр деталей">
                 👁️
               </button>
             )}
