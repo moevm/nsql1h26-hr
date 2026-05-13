@@ -1,11 +1,18 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.candidate import CandidateCreate, CandidateSort, CandidateFilter
+from app.models.candidate import (
+    CandidateStatus,
+    CandidateCreate,
+    CandidateSort,
+    CandidateFilter,
+    CandidateResponse
+)
 
 
 class CandidateRepository:
     def __init__(self, driver: AsyncDriver):
         self.driver = driver
+        self.statuses = ", ".join(f"'{c}'" for c in CandidateStatus)
 
     async def create_candidate(self, candidate_data: CandidateCreate) -> dict:
         async with self.driver.session() as session:
@@ -54,16 +61,16 @@ class CandidateRepository:
 
             candidate_id = record["id"]
 
-            get_query = """
-                MATCH (c:Candidate {id: $candidate_id})
+            get_query = f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                RETURN c {
+                RETURN c {{
                     .*,
                     vacancy_id: v.id,
                     test_task_id: t.id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-                } AS candidate_data
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
             """
             result = await session.run(get_query, candidate_id=candidate_id)
             record = await result.single()
@@ -75,18 +82,93 @@ class CandidateRepository:
     async def get_candidate_by_id(self, candidate_id: UUID) -> dict:
         async with self.driver.session() as session:
             result = await session.run(
-                """
-                MATCH (c:Candidate {id: $candidate_id})
+                f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                RETURN c {
+                RETURN c {{
                     .*,
                     vacancy_id: v.id,
                     test_task_id: t.id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
-                } AS candidate_data
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
                 """,
-                candidate_id=str(candidate_id)
+                candidate_id=str(candidate_id),
+            )
+            record = await result.single()
+            if not record:
+                return None
+            data = record["candidate_data"]
+            return {k: v for k, v in data.items() if v is not None}
+
+    async def patch_candidate(self, candidate_id: UUID, candidate_data: dict) -> dict:
+        async with self.driver.session() as session:
+            new_status = candidate_data.pop("status", None)
+            vacancy_id = candidate_data.pop("vacancy_id", None)
+            test_task_id = candidate_data.pop("test_task_id", None)
+
+            tx = await session.begin_transaction()
+            try:
+                if candidate_data:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id}) SET c += $props",
+                        id=str(candidate_id),
+                        props=candidate_data,
+                    )
+                if new_status:
+                    remove_labels = " REMOVE " + ", ".join(
+                        f"c:{s}" for s in CandidateStatus
+                    )
+                    set_label = f" SET c:{new_status}"
+                    await tx.run(
+                        f"MATCH (c:Candidate {{id: $id}}){remove_labels}{set_label}",
+                        id=str(candidate_id),
+                    )
+
+                if vacancy_id is not None:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id})-[r:APPLIES]->() DELETE r",
+                        id=str(candidate_id),
+                    )
+                    if vacancy_id:
+                        await tx.run(
+                            "MATCH (c:Candidate {id: $id}), (v:Vacancy {id: $vid}) "
+                            "CREATE (c)-[:APPLIES]->(v)",
+                            id=str(candidate_id),
+                            vid=str(vacancy_id),
+                        )
+
+                if test_task_id is not None:
+                    await tx.run(
+                        "MATCH (c:Candidate {id: $id})-[r:COMPLETES]->() DELETE r",
+                        id=str(candidate_id),
+                    )
+                    if test_task_id:
+                        await tx.run(
+                            "MATCH (c:Candidate {id: $id}), (t:TestTask {id: $tid}) "
+                            "CREATE (c)-[:COMPLETES]->(t)",
+                            id=str(candidate_id),
+                            tid=str(test_task_id),
+                        )
+
+                await tx.commit()
+            except Exception:
+                await tx.rollback()
+                raise
+
+            result = await session.run(
+                f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {{
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label IN [{self.statuses}]][0]
+                }} AS candidate_data
+                """,
+                candidate_id=str(candidate_id),
             )
             record = await result.single()
             if not record:
@@ -102,7 +184,9 @@ class CandidateRepository:
             where_clauses = []
 
             if filters.full_name:
-                where_clauses.append("toLower(c.full_name) CONTAINS toLower($full_name)")
+                where_clauses.append(
+                    "toLower(c.full_name) CONTAINS toLower($full_name)"
+                )
                 params["full_name"] = filters.full_name
             if filters.email:
                 where_clauses.append("toLower(c.email) CONTAINS toLower($email)")
@@ -111,11 +195,15 @@ class CandidateRepository:
                 where_clauses.append("toLower(c.phone) CONTAINS toLower($phone)")
                 params["phone"] = filters.phone
             if filters.resume_url_contains:
-                where_clauses.append("toLower(c.resume_url) CONTAINS toLower($resume_url_contains)")
+                where_clauses.append(
+                    "toLower(c.resume_url) CONTAINS toLower($resume_url_contains)"
+                )
                 params["resume_url_contains"] = str(filters.resume_url_contains)
 
             if filters.vacancy_id:
-                where_clauses.append("EXISTS { (c)-[:APPLIES]->(v:Vacancy {id: $vacancy_id}) }")
+                where_clauses.append(
+                    "EXISTS { (c)-[:APPLIES]->(v:Vacancy {id: $vacancy_id}) }"
+                )
                 params["vacancy_id"] = str(filters.vacancy_id)
             if filters.vacancy_title:
                 where_clauses.append(
@@ -124,7 +212,9 @@ class CandidateRepository:
                 params["vacancy_title"] = filters.vacancy_title
 
             if filters.test_task_id:
-                where_clauses.append("EXISTS { (c)-[:COMPLETES]->(t:TestTask {id: $test_task_id}) }")
+                where_clauses.append(
+                    "EXISTS { (c)-[:COMPLETES]->(t:TestTask {id: $test_task_id}) }"
+                )
                 params["test_task_id"] = str(filters.test_task_id)
             if filters.test_task_title:
                 where_clauses.append(
@@ -149,7 +239,7 @@ class CandidateRepository:
             sort_mapping = {
                 CandidateSort.FULL_NAME: "c.full_name",
                 CandidateSort.EMAIL: "c.email",
-                CandidateSort.STATUS: "c.status",
+                CandidateSort.STATUS: "status",
                 CandidateSort.CREATED_AT: "c.created_at",
             }
             sort_field = sort_mapping.get(filters.sort_by, "c.created_at")
@@ -160,13 +250,13 @@ class CandidateRepository:
                 {where_str}
                 OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
                 OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
-                WITH c, v.id as vacancy_id, t.id as test_task_id
+                WITH c, v.id as vacancy_id, t.id as test_task_id, [label IN labels(c) WHERE label IN [{self.statuses}]][0] AS status
                 ORDER BY {order_by_clause}
                 WITH count(c) AS total_count, collect(c {{
                     .*,
                     vacancy_id: vacancy_id,
                     test_task_id: test_task_id,
-                    status: [label IN labels(c) WHERE label in ['NEW', 'TEST', 'INTERVIEW', 'OFFER', 'REJECTED', 'HIRED']][0]
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
                 }}) AS items
                 RETURN total_count, items[$offset..$offset + $limit] AS candidate_data
             """
@@ -177,5 +267,75 @@ class CandidateRepository:
             if not record:
                 return {"total": 0, "items": []}
 
-            items = [dict(node) for node in record["candidate_data"]] if record["candidate_data"] else []
+            items = (
+                [dict(node) for node in record["candidate_data"]]
+                if record["candidate_data"]
+                else []
+            )
             return {"total": record["total_count"], "items": items}
+
+    async def restore_candidate(self, candidate: CandidateResponse) -> dict:
+        async with self.driver.session() as session:
+            params = {
+                "full_name": candidate.full_name,
+                "email": candidate.email,
+                "phone": candidate.phone,
+                "id": str(candidate.id)
+            }
+
+            create_query = f"""
+                CREATE (c:Candidate:{candidate.status} {{
+                    id: $id,
+                    full_name: $full_name,
+                    email: $email,
+                    phone: $phone
+            """
+
+            if candidate.resume_url:
+                params["resume_url"] = str(candidate.resume_url)
+                create_query += ", resume_url: $resume_url"
+
+            create_query += "})"
+
+            if candidate.vacancy_id:
+                params["vacancy_id"] = str(candidate.vacancy_id)
+                create_query = (
+                    "MATCH (v:Vacancy {id: $vacancy_id}) "
+                    + create_query
+                    + " CREATE (c)-[:APPLIES]->(v) "
+                )
+
+            if candidate.test_task_id:
+                params["test_task_id"] = str(candidate.test_task_id)
+                create_query = (
+                    "MATCH (t:TestTask {id: $test_task_id}) "
+                    + create_query
+                    + " CREATE (c)-[:COMPLETES]->(t) "
+                )
+
+            create_query += " RETURN c.id as id"
+
+            result = await session.run(create_query, **params)
+            record = await result.single()
+            if not record:
+                return None
+
+            candidate_id = record["id"]
+
+            get_query = f"""
+                MATCH (c:Candidate {{id: $candidate_id}})
+                OPTIONAL MATCH (c)-[:APPLIES]->(v:Vacancy)
+                OPTIONAL MATCH (c)-[:COMPLETES]->(t:TestTask)
+                RETURN c {{
+                    .*,
+                    vacancy_id: v.id,
+                    test_task_id: t.id,
+                    status: [label IN labels(c) WHERE label in [{self.statuses}]][0]
+                }} AS candidate_data
+            """
+            result = await session.run(get_query, candidate_id=candidate_id)
+            record = await result.single()
+            if record:
+                data = dict(record["candidate_data"])
+                return {k: v for k, v in data.items() if v is not None}
+            return None

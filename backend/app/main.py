@@ -14,6 +14,7 @@ from app.api.v2.interviews.routes import router as interview_router
 from app.api.v2.offers.routes import router as offer_router
 from app.api.v2.auth.routes import router as auth_router
 from app.api.v2.users.routes import router as user_router
+from app.api.v2.admin.routes import router as admin_router
 
 app = FastAPI(title="NoSQL CRM Backend", lifespan=lifespan)
 
@@ -26,45 +27,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.add_middleware(
-    AuthMiddleware
-)
+app.add_middleware(AuthMiddleware)
 
 # Подключение роутеров
 app.include_router(
-    vacancy_router,
-    prefix=f"{settings.api_prefix}/vacancies", tags=["Vacancies"]
+    vacancy_router, prefix=f"{settings.api_prefix}/vacancies", tags=["Vacancies"]
 )
 
 app.include_router(
-    test_task_router,
-    prefix=f"{settings.api_prefix}/test-tasks", tags=["TestTasks"]
+    test_task_router, prefix=f"{settings.api_prefix}/test-tasks", tags=["TestTasks"]
 )
 
 app.include_router(
-    candidate_router,
-    prefix=f"{settings.api_prefix}/candidates", tags=["Candidates"]
+    candidate_router, prefix=f"{settings.api_prefix}/candidates", tags=["Candidates"]
 )
 
 app.include_router(
-    interview_router,
-    prefix=f"{settings.api_prefix}/interviews", tags=["Interviews"]
+    interview_router, prefix=f"{settings.api_prefix}/interviews", tags=["Interviews"]
 )
 
 app.include_router(
-    offer_router,
-    prefix=f"{settings.api_prefix}/offers", tags=["Offers"]
+    offer_router, prefix=f"{settings.api_prefix}/offers", tags=["Offers"]
 )
 
-app.include_router(
-    auth_router,
-    prefix=f"{settings.api_prefix}/auth", tags=["Auth"]
-)
+app.include_router(auth_router, prefix=f"{settings.api_prefix}/auth", tags=["Auth"])
 
-app.include_router(
-    user_router,
-    prefix=f"{settings.api_prefix}/users", tags=["Users"]
-)
+app.include_router(user_router, prefix=f"{settings.api_prefix}/users", tags=["Users"])
+
+app.include_router(admin_router, prefix=f"{settings.api_prefix}/admin", tags=["Admin"])
 
 
 @app.exception_handler(AppError)

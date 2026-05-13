@@ -31,9 +31,14 @@ class OfferResponse(BaseModel):
     created_by: UUID
     salary: NonNegativeInt
     start_at: UnixTimestamp
+    created_at: UnixTimestamp
     status: OfferStatus = OfferStatus.PENDING
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OfferPatch(BaseModel):
+    status: OfferStatus
 
 
 class OfferSort(StrEnum):
@@ -73,5 +78,12 @@ class OfferFilter(BaseModel):
 class OfferFilterResponse(BaseModel):
     total: int
     items: list[OfferResponse]
+
+    model_config = ConfigDict(from_attributes=True)
+    
+    
+class OfferUpdate(BaseModel):
+    salary: NonNegativeInt | None = None
+    start_at: UnixTimestamp | None = None
 
     model_config = ConfigDict(from_attributes=True)

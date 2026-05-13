@@ -1,4 +1,3 @@
-// pages/Candidates.tsx
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DataTable, Column } from '../components/DataTable';
@@ -24,6 +23,8 @@ export function Candidates() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     full_name: '',
@@ -36,7 +37,7 @@ export function Candidates() {
 
   useEffect(() => {
     loadData();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadData() {
     setLoading(true);
@@ -53,10 +54,10 @@ export function Candidates() {
           ...(filters.vacancy_id !== 'all' && { vacancy_id: filters.vacancy_id }),
           ...(filters.createdFrom && { created_at_from: Math.floor(new Date(filters.createdFrom).getTime() / 1000) }),
           ...(filters.createdTo && { created_at_to: Math.floor(new Date(filters.createdTo).getTime() / 1000) }),
+          ...(sortBy && { sort_by: sortBy, sort_order: sortOrder }),
         }),
-        getVacancies({ limit: 200 })
+        getVacancies({ limit: 200 }),
       ]);
-      
       setCandidates(candidatesRes.items);
       setTotal(candidatesRes.total);
       setVacancies(vacanciesRes.items);
@@ -76,6 +77,12 @@ export function Candidates() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -116,36 +123,46 @@ export function Candidates() {
         options: [
           { value: 'NEW', label: 'Новый' },
           { value: 'TEST', label: 'Тестовое задание' },
-          { value: 'INTERVIEW', label: 'Интервью' },
+          { value: 'AWAIT_INTERVIEW', label: 'Интервью' },
+          { value: 'INTERVIEW_PASSED', label: 'Прошёл интервью' },
           { value: 'OFFER', label: 'Оффер' },
           { value: 'HIRED', label: 'Нанят' },
           { value: 'REJECTED', label: 'Отказ' },
         ],
       },
-      { key: 'vacancy_id', label: 'Вакансия', type: 'select', options: vacancyOptions }
+      { key: 'vacancy_id', label: 'Вакансия', type: 'select', options: vacancyOptions },
     ];
   }, [vacancies]);
 
+  const sortableFields = [
+    { value: 'full_name', label: 'ФИО' },
+    { value: 'email', label: 'Email' },
+    { value: 'status', label: 'Статус' },
+    { value: 'created_at', label: 'Дата создания' },
+  ];
+
   const getStatusLabel = (status: string): string => {
     const statusMap: Record<string, string> = {
-      'NEW': 'Новый',
-      'TEST': 'Тестовое задание',
-      'INTERVIEW': 'Интервью',
-      'OFFER': 'Оффер',
-      'HIRED': 'Нанят',
-      'REJECTED': 'Отказ',
+      NEW: 'Новый',
+      TEST: 'Тестовое задание',
+      AWAIT_INTERVIEW: 'Интервью',
+      INTERVIEW_PASSED: 'Прошёл интервью',
+      OFFER: 'Оффер',
+      HIRED: 'Нанят',
+      REJECTED: 'Отказ',
     };
     return statusMap[status] || status;
   };
 
   const getStatusBadgeClass = (status: string): string => {
     const classMap: Record<string, string> = {
-      'NEW': 'badge',
-      'TEST': 'badge-warning',
-      'INTERVIEW': 'badge-info',
-      'OFFER': 'badge-primary',
-      'HIRED': 'badge-success',
-      'REJECTED': 'badge-danger',
+      NEW: 'badge',
+      TEST: 'badge-warning',
+      AWAIT_INTERVIEW: 'badge-info',
+      INTERVIEW_PASSED: 'badge-success',
+      OFFER: 'badge-primary',
+      HIRED: 'badge-success',
+      REJECTED: 'badge-danger',
     };
     return classMap[status] || 'badge';
   };
@@ -155,14 +172,26 @@ export function Candidates() {
     { key: 'email', header: 'Email' },
     { key: 'phone', header: 'Телефон' },
     {
+      key: 'resume_url',
+      header: 'Резюме',
+      render: (c) =>
+        c.resume_url ? (
+          <a href={c.resume_url} target="_blank" rel="noreferrer" className="btn btn-sm">
+            Открыть
+          </a>
+        ) : (
+          '—'
+        ),
+    },
+    {
       key: 'status',
       header: 'Статус',
-      render: c => <span className={`badge ${getStatusBadgeClass(c.status)}`}>{getStatusLabel(c.status)}</span>,
+      render: (c) => <span className={`badge ${getStatusBadgeClass(c.status)}`}>{getStatusLabel(c.status)}</span>,
     },
     {
       key: 'vacancy_id',
       header: 'Вакансия',
-      render: c => {
+      render: (c) => {
         const vacancy = vacancies.find(v => String(v.id) === String(c.vacancy_id));
         return vacancy?.title || '—';
       },
@@ -200,6 +229,10 @@ export function Candidates() {
         onClear={handleClearFilters}
         hasActiveFilters={hasActiveFilters}
         isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
       />
 
       {loading ? (
@@ -237,8 +270,12 @@ export function Candidates() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateCandidateForm 
-              onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadData(); }} 
+            <CreateCandidateForm
+              onSuccess={() => {
+                setShowModal(false);
+                setPagination({ limit: 20, offset: 0 });
+                loadData();
+              }}
               onCancel={() => setShowModal(false)}
             />
           </div>

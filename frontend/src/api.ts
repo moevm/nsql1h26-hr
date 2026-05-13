@@ -204,6 +204,10 @@ export async function getTestTasks(params?: {
   return apiRequest(`/test-tasks${query}`);
 }
 
+export async function getTestTaskById(id: string): Promise<TestTask> {
+  return apiRequest(`/test-tasks/${id}`);
+}
+
 export async function createTestTask(data: {
   title: string;
   test_task_url: string;
@@ -211,6 +215,16 @@ export async function createTestTask(data: {
 }): Promise<TestTask> {
   return apiRequest('/test-tasks', {
     method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTestTask(
+  id: string,
+  data: { title?: string; test_task_url?: string }
+): Promise<TestTask> {
+  return apiRequest(`/test-tasks/${id}`, {
+    method: 'PATCH',
     body: JSON.stringify(data),
   });
 }
@@ -340,6 +354,20 @@ export async function deleteInterview(id: string): Promise<void> {
   return apiRequest(`/interviews/${id}`, { method: 'DELETE' });
 }
 
+export async function updateInterviewAdmin(
+  id: string,
+  data: {
+    tech_spec_id?: string;
+    scheduled_at?: number;
+    zoom_url?: string;
+  }
+): Promise<Interview> {
+  return apiRequest(`/interviews/${id}/admin`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 // ---------- Offers ----------
 export interface Offer {
   id: string;
@@ -396,8 +424,56 @@ export async function updateOfferStatus(
   });
 }
 
+export async function updateOfferAdmin(
+  id: string,
+  data: {
+    salary?: number;
+    start_at?: number;
+  }
+): Promise<Offer> {
+  return apiRequest(`/offers/${id}/admin`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function deleteOffer(id: string): Promise<void> {
   return apiRequest(`/offers/${id}`, { method: 'DELETE' });
 }
 
+export async function getVacancyById(id: string): Promise<Vacancy> {
+  return apiRequest(`/vacancies/${id}`);
+}
 
+export async function getCandidateById(id: string): Promise<Candidate> {
+  return apiRequest(`/candidates/${id}`);
+}
+
+export async function getInterviewById(id: string): Promise<Interview> {
+  return apiRequest(`/interviews/${id}`);
+}
+
+export async function getOfferById(id: string): Promise<Offer> {
+  return apiRequest(`/offers/${id}`);
+}
+
+// ---------- Admin Backup / Restore ----------
+export interface SystemBackup {
+  users: User[];
+  vacancies: Vacancy[];
+  test_tasks: TestTask[];
+  candidates: Candidate[];
+  interviews: Interview[];
+  offers: Offer[];
+}
+
+export async function adminBackup(): Promise<SystemBackup> {
+  return apiRequest('/admin/backup');
+}
+
+export async function adminRestore(backup: SystemBackup): Promise<{ status: string }> {
+  return apiRequest('/admin/restore', {
+    method: 'POST',
+    body: JSON.stringify(backup),
+  });
+}

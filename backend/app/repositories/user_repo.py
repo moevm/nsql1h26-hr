@@ -1,7 +1,7 @@
 from neo4j import AsyncDriver
 from uuid import uuid4
-from typing import Optional
-from app.models.user import UserDB, UserFilter
+from typing import Optional, List
+from app.models.user import UserDB, UserFilter, UserCreate
 
 
 class UserRepository:
@@ -11,10 +11,10 @@ class UserRepository:
     async def get_user_by_email(self, email: str) -> Optional[UserDB]:
         query = """
         MATCH (u:User {email: $email})
-        RETURN u.id as id, u.email as email, u.full_name as full_name, 
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
-        result = await self.driver.execute_query(query, email=email)
+        result = await self.driver.execute_query(query, email=str(email))
         if result.records:
             record = result.records[0]
             return UserDB(
@@ -29,10 +29,10 @@ class UserRepository:
     async def get_user_by_id(self, user_id: str) -> Optional[UserDB]:
         query = """
         MATCH (u:User {id: $user_id})
-        RETURN u.id as id, u.email as email, u.full_name as full_name, 
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
                u.password_hash as password_hash, u.role as role
         """
-        result = await self.driver.execute_query(query, user_id=user_id)
+        result = await self.driver.execute_query(query, user_id=str(user_id))
         if result.records:
             record = result.records[0]
             return UserDB(
@@ -44,16 +44,37 @@ class UserRepository:
             )
         return None
 
+    async def get_users(self) -> List[UserDB]:
+        query = """
+        MATCH (u:User)
+        RETURN u.id as id, u.email as email, u.full_name as full_name,
+               u.password_hash as password_hash, u.role as role
+        """
+        result = await self.driver.execute_query(query)
+        items = []
+        for record in result.records:
+            items.append(
+                UserDB(
+                    id=record["id"],
+                    email=record["email"],
+                    full_name=record["full_name"],
+                    role=record["role"],
+                    password_hash=record["password_hash"],
+                )
+            )
+
+        return items
+
     async def create_user(self, user_data: dict) -> UserDB:
         user_id = str(uuid4())
-        query = """
-        CREATE (u:User {
+        query = f"""
+        CREATE (u:User:{user_data["role"]} {{
             id: $id,
             email: $email,
             full_name: $full_name,
             password_hash: $password_hash,
             role: $role
-        })
+        }})
         RETURN u.id as id, u.email as email, u.full_name as full_name, u.role as role
         """
         result = await self.driver.execute_query(
@@ -119,12 +140,14 @@ class UserRepository:
 
         items = []
         for record in result.records:
-            items.append({
-                "id": record["id"],
-                "email": record["email"],
-                "full_name": record["full_name"],
-                "role": record["role"],
-            })
+            items.append(
+                {
+                    "id": record["id"],
+                    "email": record["email"],
+                    "full_name": record["full_name"],
+                    "role": record["role"],
+                }
+            )
 
         return {"total": total, "items": items}
 
@@ -137,3 +160,31 @@ class UserRepository:
         result = await self.driver.execute_query(query, user_id=user_id)
         deleted = result.records[0]["deleted"] if result.records else 0
         return deleted > 0
+
+    async def restore_user(self, user: UserDB) -> UserDB:
+        query = f"""
+        CREATE (u:User:{user.role} {{
+            id: $id,
+            email: $email,
+            full_name: $full_name,
+            password_hash: $password_hash,
+            role: $role
+        }})
+        RETURN u.id as id, u.email as email, u.full_name as full_name, u.role as role, u.password_hash as password_hash
+        """
+        result = await self.driver.execute_query(
+            query,
+            id=str(user.id),
+            email=str(user.email),
+            full_name=user.full_name,
+            password_hash=user.password_hash,
+            role=user.role,
+        )
+        record = result.records[0]
+        return UserDB(
+            id=record["id"],
+            email=record["email"],
+            full_name=record["full_name"],
+            password_hash=record["password_hash"],
+            role=record["role"],
+        )

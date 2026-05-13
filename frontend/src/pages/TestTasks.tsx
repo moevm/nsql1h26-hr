@@ -7,10 +7,10 @@ import { FilterField } from '../types/filters';
 import { toast } from 'sonner';
 import { getTestTasks, deleteTestTask, getVacancies, TestTask, Vacancy } from '../api';
 import { usePermissions } from '../hooks/usePermissions';
-import { CreateTestTaskForm } from '../components/CreateTestAssignmentForm';
+import { CreateTestTaskForm } from '../components/CreateTestTaskForm';
 import '../styles/App.css';
 
-export function TestAssignments() {
+export function TestTasks() {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const permissions = usePermissions(user?.role);
@@ -23,6 +23,8 @@ export function TestAssignments() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     title: '',
@@ -37,7 +39,7 @@ export function TestAssignments() {
 
   useEffect(() => {
     loadTestTasks();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadVacancies() {
     try {
@@ -63,6 +65,10 @@ export function TestAssignments() {
       if (filters.createdTo) {
         params.created_at_to = Math.floor(new Date(filters.createdTo).getTime() / 1000);
       }
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
+      }
       const response = await getTestTasks(params);
       setAssignments(response.items);
       setTotal(response.total);
@@ -82,6 +88,12 @@ export function TestAssignments() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -118,12 +130,27 @@ export function TestAssignments() {
     ];
   }, [vacancies]);
 
+  const sortableFields = [
+    { value: 'title', label: 'Название' },
+    { value: 'vacancy_id', label: 'Вакансия' },
+    { value: 'created_at', label: 'Дата создания' },
+  ];
+
   const columns: Column<TestTask>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'title', header: 'Название' },
-    { key: 'test_task_url', header: 'Ссылка', render: a => a.test_task_url ? <a href={a.test_task_url} target="_blank" rel="noreferrer" className="btn btn-sm">Открыть</a> : '—' },
+    {
+      key: 'test_task_url',
+      header: 'Ссылка',
+      render: a =>
+        a.test_task_url ? (
+          <a href={a.test_task_url} target="_blank" rel="noreferrer" className="btn btn-sm">
+            Открыть
+          </a>
+        ) : (
+          '—'
+        ),
+    },
     { key: 'vacancy_id', header: 'Вакансия', render: a => vacancies.find(v => v.id === a.vacancy_id)?.title || '—' },
-    { key: 'created_at', header: 'Создано', render: a => a.created_at ? new Date(a.created_at * 1000).toLocaleDateString('ru-RU') : '—' },
   ];
 
   const totalPages = Math.ceil(total / pagination.limit);
@@ -150,7 +177,18 @@ export function TestAssignments() {
         </div>
       </div>
 
-      <FilterBar fields={filterFields} filters={filters} onFilterChange={handleFilterChange} onClear={handleClearFilters} hasActiveFilters={hasActiveFilters} isVisible={showFilters} />
+      <FilterBar
+        fields={filterFields}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
+      />
 
       {loading ? (
         <div>Загрузка...</div>
@@ -165,7 +203,7 @@ export function TestAssignments() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет тестовых заданий"
             actions={a => (
-              <button className="btn btn-sm" onClick={() => {}} title="Просмотр деталей">
+              <button className="btn btn-sm" onClick={() => navigate(`/test-tasks/${a.id}`)} title="Просмотр деталей">
                 👁️
               </button>
             )}
@@ -187,7 +225,15 @@ export function TestAssignments() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateTestTaskForm vacancies={vacancies} onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadTestTasks(); }} onCancel={() => setShowModal(false)} />
+            <CreateTestTaskForm
+              vacancies={vacancies}
+              onSuccess={() => {
+                setShowModal(false);
+                setPagination({ limit: 20, offset: 0 });
+                loadTestTasks();
+              }}
+              onCancel={() => setShowModal(false)}
+            />
           </div>
         </div>
       )}

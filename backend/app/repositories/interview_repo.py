@@ -1,13 +1,22 @@
 from neo4j import AsyncDriver
 from uuid import UUID
-from app.models.interview import InterviewCreate, InterviewResponse, InterviewFilter, InterviewFilterResponse, InterviewSort
+from app.models.interview import (
+    InterviewCreate,
+    InterviewResponse,
+    InterviewFilter,
+    InterviewFilterResponse,
+    InterviewPatch,
+    InterviewUpdate
+)
 
 
 class InterviewRepository:
     def __init__(self, driver: AsyncDriver):
         self.driver = driver
 
-    async def create_interview(self, interview_data: InterviewCreate) -> InterviewResponse:
+    async def create_interview(
+        self, interview_data: InterviewCreate
+    ) -> InterviewResponse:
         async with self.driver.session() as session:
             result = await session.run(
                 """
@@ -22,7 +31,6 @@ class InterviewRepository:
                 })
                 CREATE (c)-[:ASSIGNED_FOR]->(i)
                 CREATE (u)-[:INTERVIEWING]->(i)
-                SET c.status = 'INTERVIEW'
                 RETURN i {
                     .*,
                     candidate_id: c.id,
@@ -32,10 +40,37 @@ class InterviewRepository:
                 candidate_id=str(interview_data.candidate_id),
                 tech_spec_id=str(interview_data.tech_spec_id),
                 scheduled_at=interview_data.scheduled_at,
-                zoom_url=str(interview_data.zoom_url) if interview_data.zoom_url else None,
+                zoom_url=(
+                    str(interview_data.zoom_url) if interview_data.zoom_url else None
+                ),
                 feedback=interview_data.feedback,
-                result=interview_data.result.value if interview_data.result else "AWAIT_INTERVIEW"
+                result=(
+                    interview_data.result.value
+                    if interview_data.result
+                    else "AWAIT_INTERVIEW"
+                ),
             )
+            record = await result.single()
+            if not record:
+                return None
+            return InterviewResponse(**record["interview_data"])
+
+    async def patch_interview(
+        self, interview_id: UUID, patch: dict
+    ) -> InterviewResponse:
+        async with self.driver.session() as session:
+            query = """
+            MATCH (i:Interview {id: $id})
+            MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
+            MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
+            SET i += $props
+            RETURN i {
+                .*,
+                candidate_id: c.id,
+                tech_spec_id: u.id
+            } AS interview_data
+            """
+            result = await session.run(query, id=str(interview_id), props=patch)
             record = await result.single()
             if not record:
                 return None
@@ -52,14 +87,16 @@ class InterviewRepository:
                     tech_spec_id: u.id
                 } AS interview_data
                 """,
-                interview_id=str(interview_id)
+                interview_id=str(interview_id),
             )
             record = await result.single()
             if not record:
                 return None
             return InterviewResponse(**record["interview_data"])
 
-    async def filter_interviews(self, filters: InterviewFilter) -> InterviewFilterResponse:
+    async def filter_interviews(
+        self, filters: InterviewFilter
+    ) -> InterviewFilterResponse:
         async with self.driver.session() as session:
             params = {
                 "limit": filters.limit,
@@ -68,19 +105,27 @@ class InterviewRepository:
             where_clauses = []
 
             if filters.candidate_id:
-                where_clauses.append("EXISTS { (c:Candidate {id: $candidate_id})-[:ASSIGNED_FOR]->(i) }")
+                where_clauses.append(
+                    "EXISTS { (c:Candidate {id: $candidate_id})-[:ASSIGNED_FOR]->(i) }"
+                )
                 params["candidate_id"] = str(filters.candidate_id)
 
             if filters.candidate_name:
-                where_clauses.append("EXISTS { (c:Candidate)-[:ASSIGNED_FOR]->(i) WHERE toLower(c.full_name) CONTAINS toLower($candidate_name) }")
+                where_clauses.append(
+                    "EXISTS { (c:Candidate)-[:ASSIGNED_FOR]->(i) WHERE toLower(c.full_name) CONTAINS toLower($candidate_name) }"
+                )
                 params["candidate_name"] = filters.candidate_name
 
             if filters.tech_spec_id:
-                where_clauses.append("EXISTS { (u:User:TECH_SPEC {id: $tech_spec_id})-[:INTERVIEWING]->(i) }")
+                where_clauses.append(
+                    "EXISTS { (u:User:TECH_SPEC {id: $tech_spec_id})-[:INTERVIEWING]->(i) }"
+                )
                 params["tech_spec_id"] = str(filters.tech_spec_id)
 
             if filters.tech_spec_name:
-                where_clauses.append("EXISTS { (u:User:TECH_SPEC)-[:INTERVIEWING]->(i) WHERE toLower(u.full_name) CONTAINS toLower($tech_spec_name) }")
+                where_clauses.append(
+                    "EXISTS { (u:User:TECH_SPEC)-[:INTERVIEWING]->(i) WHERE toLower(u.full_name) CONTAINS toLower($tech_spec_name) }"
+                )
                 params["tech_spec_name"] = filters.tech_spec_name
 
             if filters.result:
@@ -88,7 +133,9 @@ class InterviewRepository:
                 params["result"] = filters.result.value
 
             if filters.feedback_contains:
-                where_clauses.append("toLower(i.feedback) CONTAINS toLower($feedback_contains)")
+                where_clauses.append(
+                    "toLower(i.feedback) CONTAINS toLower($feedback_contains)"
+                )
                 params["feedback_contains"] = filters.feedback_contains
 
             if filters.scheduled_at_from is not None:
@@ -103,8 +150,8 @@ class InterviewRepository:
 
             universal_query = f"""
             MATCH (i:Interview)
-            OPTIONAL MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
-            OPTIONAL MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
+            MATCH (c:Candidate)-[:ASSIGNED_FOR]->(i)
+            MATCH (u:User:TECH_SPEC)-[:INTERVIEWING]->(i)
             {where_str}
             WITH i, c, u
             ORDER BY
@@ -124,5 +171,83 @@ class InterviewRepository:
             record = await result.single()
             if not record:
                 return InterviewFilterResponse(total=0, items=[])
-            items = [InterviewResponse(**item) for item in record["interview_data"]] if record["interview_data"] else []
+            items = (
+                [InterviewResponse(**item) for item in record["interview_data"]]
+                if record["interview_data"]
+                else []
+            )
             return InterviewFilterResponse(total=record["total_count"], items=items)
+
+    async def restore_interview(
+        self, interview: InterviewResponse
+    ) -> InterviewResponse:
+        async with self.driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (c:Candidate {id: $candidate_id})
+                MATCH (u:User:TECH_SPEC {id: $tech_spec_id})
+                CREATE (i:Interview {
+                    id: $id,
+                    scheduled_at: $scheduled_at,
+                    zoom_url: $zoom_url,
+                    feedback: $feedback,
+                    result: $result
+                })
+                CREATE (c)-[:ASSIGNED_FOR]->(i)
+                CREATE (u)-[:INTERVIEWING]->(i)
+                RETURN i {
+                    .*,
+                    candidate_id: c.id,
+                    tech_spec_id: u.id
+                } AS interview_data
+                """,
+                id=str(interview.id),
+                candidate_id=str(interview.candidate_id),
+                tech_spec_id=str(interview.tech_spec_id),
+                scheduled_at=interview.scheduled_at,
+                zoom_url=(
+                    str(interview.zoom_url) if interview.zoom_url else None
+                ),
+                feedback=interview.feedback,
+                result=(
+                    interview.result.value
+                    if interview.result
+                    else "AWAIT_INTERVIEW"
+                ),
+            )
+            record = await result.single()
+            if not record:
+                return None
+            return InterviewResponse(**record["interview_data"])
+            
+    async def update_interview(self, interview_id: UUID, update_data: dict) -> InterviewResponse:
+        async with self.driver.session() as session:
+            set_fields = []
+            params = {"id": str(interview_id)}
+            if "scheduled_at" in update_data:
+                set_fields.append("i.scheduled_at = $scheduled_at")
+                params["scheduled_at"] = update_data["scheduled_at"]
+            if "zoom_url" in update_data:
+                set_fields.append("i.zoom_url = $zoom_url")
+                params["zoom_url"] = update_data["zoom_url"]
+
+            if set_fields:
+                set_clause = "SET " + ", ".join(set_fields)
+                query_update = f"""
+                MATCH (i:Interview {{id: $id}})
+                {set_clause}
+                """
+                await session.run(query_update, **params)
+
+            if "tech_spec_id" in update_data:
+                tech_spec_id = update_data["tech_spec_id"]
+                query_tech = """
+                MATCH (i:Interview {id: $id})
+                MATCH (newTech:User:TECH_SPEC {id: $tech_spec_id})
+                OPTIONAL MATCH (i)<-[old:INTERVIEWING]-(oldTech:User:TECH_SPEC)
+                DELETE old
+                CREATE (newTech)-[:INTERVIEWING]->(i)
+                """
+                await session.run(query_tech, id=str(interview_id), tech_spec_id=tech_spec_id)
+
+            return await self.get_interview_by_id(interview_id)

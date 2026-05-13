@@ -139,6 +139,8 @@ export function usePermissions(userRole: UserRole | null | undefined): Permissio
     if (userRole === 'MANAGER') {
       return {
         ...basePermissions,
+        canViewVacancies: false,
+        canViewTestTasks: false,
         canCreateVacancy: false,
         canEditVacancy: false,
         canDeleteVacancy: false,
@@ -165,6 +167,8 @@ export function usePermissions(userRole: UserRole | null | undefined): Permissio
     if (userRole === 'TECH_SPEC') {
       return {
         ...basePermissions,
+        canViewVacancies: false,
+        canViewOffers: false,
         canCreateVacancy: false,
         canEditVacancy: false,
         canDeleteVacancy: false,

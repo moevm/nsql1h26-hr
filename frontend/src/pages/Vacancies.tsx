@@ -30,6 +30,8 @@ export function Vacancies() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedVacancies, setSelectedVacancies] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     title: '',
@@ -41,7 +43,7 @@ export function Vacancies() {
 
   useEffect(() => {
     loadVacancies();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadVacancies() {
     setLoading(true);
@@ -58,6 +60,10 @@ export function Vacancies() {
       }
       if (filters.createdTo) {
         params.created_at_to = Math.floor(new Date(filters.createdTo).getTime() / 1000);
+      }
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
       }
       const response = await getVacancies(params);
       setVacancies(response.items);
@@ -78,6 +84,12 @@ export function Vacancies() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -104,34 +116,32 @@ export function Vacancies() {
     }
   };
 
+  const sortableFields = [
+    { value: 'title', label: 'Название' },
+    { value: 'status', label: 'Статус' },
+    { value: 'created_at', label: 'Дата создания' },
+    { value: 'closed_at', label: 'Дата закрытия' },
+  ];
+
   const columns: Column<Vacancy>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'title', header: 'Название' },
-    { 
-      key: 'description', 
-      header: 'Описание', 
-      render: v => v.description.length > 100 ? v.description.slice(0, 100) + '…' : v.description, 
-      className: 'max-w-xs' 
+    {
+      key: 'description',
+      header: 'Описание',
+      render: v => (v.description.length > 100 ? v.description.slice(0, 100) + '…' : v.description),
+      className: 'max-w-xs',
     },
-    { 
-      key: 'status', 
-      header: 'Статус', 
+    {
+      key: 'status',
+      header: 'Статус',
       render: v => (
         <span className={`badge ${v.status === 'OPEN' ? 'badge-success' : 'badge-danger'}`}>
           {v.status === 'OPEN' ? 'Открыта' : 'Закрыта'}
         </span>
-      )
+      ),
     },
-    { 
-      key: 'created_at', 
-      header: 'Создана', 
-      render: v => new Date(v.created_at * 1000).toLocaleDateString('ru-RU') 
-    },
-    { 
-      key: 'closed_at', 
-      header: 'Закрыта', 
-      render: v => v.closed_at ? new Date(v.closed_at * 1000).toLocaleDateString('ru-RU') : '—' 
-    }
+    { key: 'created_at', header: 'Создана', render: v => new Date(v.created_at * 1000).toLocaleDateString('ru-RU') },
+    { key: 'closed_at', header: 'Закрыта', render: v => (v.closed_at ? new Date(v.closed_at * 1000).toLocaleDateString('ru-RU') : '—') },
   ];
 
   const totalPages = Math.ceil(total / pagination.limit);
@@ -158,13 +168,17 @@ export function Vacancies() {
         </div>
       </div>
 
-      <FilterBar 
-        fields={filterFields} 
-        filters={filters} 
-        onFilterChange={handleFilterChange} 
-        onClear={handleClearFilters} 
-        hasActiveFilters={hasActiveFilters} 
-        isVisible={showFilters} 
+      <FilterBar
+        fields={filterFields}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
       />
 
       {loading ? (
@@ -180,28 +194,18 @@ export function Vacancies() {
             onSelectAll={handleSelectAll}
             emptyMessage="Нет вакансий"
             actions={v => (
-              <button className="btn btn-sm" onClick={() => {}} title="Просмотр деталей">
+              <button className="btn btn-sm" onClick={() => navigate(`/vacancies/${v.id}`)} title="Просмотр деталей">
                 👁️
               </button>
             )}
           />
           {totalPages > 1 && (
             <div className="pagination" style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1rem' }}>
-              <button 
-                className="btn btn-sm"
-                disabled={pagination.offset === 0}
-                onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset - prev.limit }))}
-              >
+              <button className="btn btn-sm" disabled={pagination.offset === 0} onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset - prev.limit }))}>
                 ← Назад
               </button>
-              <span style={{ padding: '0.25rem 0.5rem' }}>
-                Страница {currentPage} из {totalPages}
-              </span>
-              <button 
-                className="btn btn-sm"
-                disabled={pagination.offset + pagination.limit >= total}
-                onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset + prev.limit }))}
-              >
+              <span style={{ padding: '0.25rem 0.5rem' }}>Страница {currentPage} из {totalPages}</span>
+              <button className="btn btn-sm" disabled={pagination.offset + pagination.limit >= total} onClick={() => setPagination(prev => ({ ...prev, offset: prev.offset + prev.limit }))}>
                 Вперёд →
               </button>
             </div>
@@ -212,12 +216,12 @@ export function Vacancies() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateVacancyForm 
-              onSuccess={() => { 
-                setShowModal(false); 
+            <CreateVacancyForm
+              onSuccess={() => {
+                setShowModal(false);
                 setPagination({ limit: 20, offset: 0 });
-                loadVacancies(); 
-              }} 
+                loadVacancies();
+              }}
               onCancel={() => setShowModal(false)}
             />
           </div>

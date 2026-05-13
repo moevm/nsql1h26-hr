@@ -37,9 +37,9 @@ export function DataTable<T>({
       <table className="table">
         <thead>
           <tr>
-            <th className="checkbox-cell">
+            {/*{<th className="checkbox-cell">
               <input type="checkbox" onChange={(e) => onSelectAll(e.target.checked)} checked={allSelected} />
-            </th>
+            </th>*/}
             {columns.map(col => (
               <th key={col.key} className={col.className}>{col.header}</th>
             ))}
@@ -59,13 +59,13 @@ export function DataTable<T>({
               const isSelected = selectedIds.includes(id);
               return (
                 <tr key={id}>
-                  <td className="checkbox-cell">
+                  {/*<td className="checkbox-cell">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={e => onSelect(id, e.target.checked)}
                     />
-                  </td>
+                  </td>*/}
                   {columns.map(col => (
                     <td key={col.key} className={col.className}>
                       {col.render ? col.render(item) : (item as any)[col.key]}

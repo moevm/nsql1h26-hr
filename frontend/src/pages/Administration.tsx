@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { DataTable, Column } from '../components/DataTable';
 import { FilterBar } from '../components/FilterBar';
 import { useFilters } from '../hooks/useFilters';
 import { FilterField } from '../types/filters';
 import { toast } from 'sonner';
-import { getUsers, deleteUser, User } from '../api';
+import { getUsers, deleteUser, adminBackup, adminRestore, User, SystemBackup } from '../api';
 import { usePermissions } from '../hooks/usePermissions';
 import { CreateUserForm } from '../components/CreateUserForm';
 import '../styles/App.css';
@@ -12,6 +12,7 @@ import '../styles/App.css';
 export function Administration() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const permissions = usePermissions(user?.role);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,16 +21,19 @@ export function Administration() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const { filters, updateFilter, clearFilters, hasActiveFilters } = useFilters({
     email: '',
     full_name: '',
-    role: 'all' as string,
+    role: 'all',
   });
 
   useEffect(() => {
     loadUsers();
-  }, [filters, pagination]);
+  }, [filters, pagination, sortBy, sortOrder]);
 
   async function loadUsers() {
     setLoading(true);
@@ -41,6 +45,10 @@ export function Administration() {
       if (filters.email) params.email = filters.email;
       if (filters.full_name) params.full_name = filters.full_name;
       if (filters.role !== 'all') params.role = filters.role;
+      if (sortBy) {
+        params.sort_by = sortBy;
+        params.sort_order = sortOrder;
+      }
       const response = await getUsers(params);
       setUsers(response.items);
       setTotal(response.total);
@@ -60,6 +68,12 @@ export function Administration() {
   const handleClearFilters = () => {
     clearFilters();
     setPagination({ limit: 20, offset: 0 });
+  };
+
+  const handleSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+    setPagination(prev => ({ ...prev, offset: 0 }));
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -91,6 +105,60 @@ export function Administration() {
     }
   };
 
+  const handleExportBackup = async () => {
+    if (!permissions.canViewUsers) {
+      toast.error('Недостаточно прав для экспорта');
+      return;
+    }
+    setBackupLoading(true);
+    try {
+      const backup = await adminBackup();
+      const dataStr = JSON.stringify(backup, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${new Date().toISOString().slice(0, 19)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Бэкап успешно сохранён');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка при экспорте');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!permissions.canViewUsers) {
+      toast.error('Недостаточно прав для импорта');
+      return;
+    }
+    if (!window.confirm('Восстановление из бэкапа полностью перезапишет все данные. Продолжить?')) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setBackupLoading(true);
+    try {
+      const text = await file.text();
+      const backupData: SystemBackup = JSON.parse(text);
+      await adminRestore(backupData);
+      toast.success('Данные успешно восстановлены');
+      window.location.reload();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Ошибка при импорте');
+    } finally {
+      setBackupLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const filterFields: FilterField[] = useMemo(
     () => [
       { key: 'email', label: 'Email', type: 'text', placeholder: 'Email пользователя' },
@@ -110,31 +178,41 @@ export function Administration() {
     []
   );
 
+  const sortableFields = [
+    { value: 'full_name', label: 'ФИО' },
+    { value: 'email', label: 'Email' },
+    { value: 'role', label: 'Роль' },
+    { value: 'created_at', label: 'Дата создания' },
+  ];
+
   const getRoleLabel = (role: string): string => {
     const roleMap: Record<string, string> = {
-      'ADMIN': 'Администратор',
-      'HR': 'HR',
-      'MANAGER': 'Менеджер',
-      'TECH_SPEC': 'Технический специалист',
+      ADMIN: 'Администратор',
+      HR: 'HR',
+      MANAGER: 'Менеджер',
+      TECH_SPEC: 'Технический специалист',
     };
     return roleMap[role] || role;
   };
 
   const getRoleBadgeClass = (role: string): string => {
     const classMap: Record<string, string> = {
-      'ADMIN': 'badge-danger',
-      'HR': 'badge-success',
-      'MANAGER': 'badge-primary',
-      'TECH_SPEC': 'badge-warning',
+      ADMIN: 'badge-danger',
+      HR: 'badge-success',
+      MANAGER: 'badge-primary',
+      TECH_SPEC: 'badge-warning',
     };
     return classMap[role] || 'badge';
   };
 
   const columns: Column<User>[] = [
-    { key: 'id', header: 'ID' },
     { key: 'email', header: 'Email' },
     { key: 'full_name', header: 'ФИО' },
-    { key: 'role', header: 'Роль', render: u => <span className={`badge ${getRoleBadgeClass(u.role)}`}>{getRoleLabel(u.role)}</span> },
+    {
+      key: 'role',
+      header: 'Роль',
+      render: u => <span className={`badge ${getRoleBadgeClass(u.role)}`}>{getRoleLabel(u.role)}</span>,
+    },
   ];
 
   if (!permissions.canViewUsers) {
@@ -170,10 +248,28 @@ export function Administration() {
               ➕ Добавить пользователя
             </button>
           )}
+          <button className="btn" onClick={handleExportBackup} disabled={backupLoading}>
+            📦 Экспорт БД
+          </button>
+          <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={backupLoading}>
+            📂 Импорт БД
+          </button>
+          <input type="file" ref={fileInputRef} accept="application/json" style={{ display: 'none' }} onChange={handleImportBackup} />
         </div>
       </div>
 
-      <FilterBar fields={filterFields} filters={filters} onFilterChange={handleFilterChange} onClear={handleClearFilters} hasActiveFilters={hasActiveFilters} isVisible={showFilters} />
+      <FilterBar
+        fields={filterFields}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onClear={handleClearFilters}
+        hasActiveFilters={hasActiveFilters}
+        isVisible={showFilters}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={handleSortChange}
+        sortableFields={sortableFields}
+      />
 
       {loading ? (
         <div>Загрузка...</div>
@@ -205,7 +301,14 @@ export function Administration() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <CreateUserForm onSuccess={() => { setShowModal(false); setPagination({ limit: 20, offset: 0 }); loadUsers(); }} onCancel={() => setShowModal(false)} />
+            <CreateUserForm
+              onSuccess={() => {
+                setShowModal(false);
+                setPagination({ limit: 20, offset: 0 });
+                loadUsers();
+              }}
+              onCancel={() => setShowModal(false)}
+            />
           </div>
         </div>
       )}

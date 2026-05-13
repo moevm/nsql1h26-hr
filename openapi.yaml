@@ -85,7 +85,7 @@ components:
         email: { type: string, format: email }
         phone: { type: string, pattern: '^\+7\d{10}$' }
         resume_url: { type: string, format: uri }
-        status: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
         test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
       required: [full_name, email, phone, status]
@@ -98,7 +98,7 @@ components:
         email: { type: string, format: email }
         phone: { type: string, pattern: '^\+7\d{10}$' }
         resume_url: { type: string, format: uri }
-        status: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+        status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         vacancy_id: { type: string, format: uuid, description: "Связь APPLIES: Candidate → Vacancy" }
         test_task_id: { type: string, format: uuid, description: "Связь COMPLETES: Candidate → TestTask" }
       required: [id, full_name, email, phone, status]
@@ -205,17 +205,164 @@ paths:
   # ==================== Auth ====================
   /v2/auth/register:
     post:
-      summary: Регистрация пользователя
-      tags: [Auth]
+      summary: Регистрация нового пользователя
+      description: |
+        Создание новой учетной записи.
+        
+        **Правила валидации:**
+        - Email должен быть уникальным
+        - Пароль: минимум 6 символов
+        - ФИО: от 3 до 150 символов
+        
+        **Ролевая модель:**
+        - При регистрации через этот эндпоинт роль всегда `HR` (для демо)
+        - В production роль должна быть ограничена или требовать подтверждения
+      tags: 
+        - Auth
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/UserCreate' }
+            schema:
+              type: object
+              required:
+                - email
+                - full_name
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  minLength: 1
+                  maxLength: 255
+                  example: "hr@example.com"
+                  description: "Email пользователя (уникальный)"
+                full_name:
+                  type: string
+                  minLength: 3
+                  maxLength: 150
+                  example: "HR Менеджер"
+                  description: "Полное имя пользователя"
+                password:
+                  type: string
+                  minLength: 6
+                  maxLength: 100
+                  format: password
+                  example: "hr123"
+                  description: "Пароль (минимум 6 символов)"
+                role:
+                  type: string
+                  enum: [ADMIN, HR, TECH_SPEC, MANAGER]
+                  default: HR
+                  description: "Роль пользователя (опционально, по умолчанию HR)"
+            examples:
+              hr_user:
+                summary: "Регистрация HR"
+                value:
+                  email: "hr@example.com"
+                  full_name: "HR Менеджер"
+                  password: "hr123"
+                  role: "HR"
+              tech_spec:
+                summary: "Регистрация техспециалиста"
+                value:
+                  email: "tech@example.com"
+                  full_name: "Технический Специалист"
+                  password: "tech123"
+                  role: "TECH_SPEC"
       responses:
-        '201': { description: Пользователь создан, content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } } }
-        '400': { description: Неверные данные }
-        '409': { description: Email уже существует }
+        '201':
+          description: "Пользователь успешно создан"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    description: "Уникальный идентификатор пользователя"
+                    example: "262995c7-7fae-4b2f-a1dc-655660154b2e"
+                  email:
+                    type: string
+                    format: email
+                    example: "hr@example.com"
+                  full_name:
+                    type: string
+                    example: "HR Менеджер"
+                  role:
+                    type: string
+                    enum: [ADMIN, HR, TECH_SPEC, MANAGER]
+                    example: "HR"
+              example:
+                id: "262995c7-7fae-4b2f-a1dc-655660154b2e"
+                email: "hr@example.com"
+                full_name: "HR Менеджер"
+                role: "HR"
+        '400':
+          description: "Неверные данные запроса"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    oneOf:
+                      - type: string
+                        example: "Password must be at least 6 characters"
+                      - type: array
+                        items:
+                          type: object
+                          properties:
+                            loc:
+                              type: array
+                              items:
+                                type: string
+                              example: ["body", "email"]
+                            msg:
+                              type: string
+                              example: "value is not a valid email address"
+                            type:
+                              type: string
+                              example: "value_error"
+              examples:
+                invalid_email:
+                  value:
+                    detail: [
+                      {
+                        "loc": ["body", "email"],
+                        "msg": "value is not a valid email address",
+                        "type": "value_error"
+                      }
+                    ]
+                short_password:
+                  value:
+                    detail: "Password must be at least 6 characters"
+                short_name:
+                  value:
+                    detail: "Full name must be at least 3 characters"
+        '409':
+          description: "Конфликт - пользователь с таким email уже существует"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "User with email hr@example.com already exists"
+        '422':
+          description: "Ошибка валидации"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+      security: []  # не требует авторизации
 
   /v2/auth/login:
     post:
@@ -510,7 +657,7 @@ paths:
         # Статус
         - name: status
           in: query
-          schema: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
         # Связи
         - name: vacancy_id
           in: query
@@ -620,7 +767,7 @@ paths:
                 email: { type: string, format: email }
                 phone: { type: string, pattern: '^\+7\d{10}$' }
                 resume_url: { type: string, format: uri }
-                status: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+                status: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
                 vacancy_id: { type: string, format: uuid }
                 test_task_id: { type: string, format: uuid, description: "Назначить тест (связь COMPLETES)" }
       responses:
@@ -719,7 +866,7 @@ paths:
                   items: { type: array, items: { $ref: '#/components/schemas/InterviewResponse' } }
     post:
       summary: Назначить интервью кандидату
-      description: Роль HR, ADMIN. Назначение интервью должно создавать связь ASSIGNED_FOR между кандидатом и интервью, а также связь INTERVIEWING между интервью и тех. специалистом. При назначении интервью статус кандидата автоматически меняется на INTERVIEW.
+      description: Роль HR, ADMIN. Назначение интервью должно создавать связь ASSIGNED_FOR между кандидатом и интервью, а также связь INTERVIEWING между интервью и тех. специалистом. При назначении интервью статус кандидата автоматически меняется на AWAIT_INTERVIEW.
       tags: [Interviews]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -729,7 +876,7 @@ paths:
             schema: { $ref: '#/components/schemas/InterviewCreate' }
       responses:
         '201':
-          description: Интервью создано, статус кандидата автоматически меняется на INTERVIEW
+          description: Интервью создано, статус кандидата автоматически меняется на AWAIT_INTERVIEW
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InterviewResponse' }
@@ -774,7 +921,7 @@ paths:
               required: [feedback, result]
       responses:
         '200':
-          description: Фидбек сохранён. При INTERVIEW_PASSED статус кандидата → OFFER
+          description: Фидбек сохранён. При INTERVIEW_PASSED статус кандидата → INTERVIEW_PASSED, при INTERVIEW_FAILED статус кандидата → REJECTED
           content:
             application/json:
               schema: { $ref: '#/components/schemas/InterviewResponse' }
@@ -821,7 +968,7 @@ paths:
           description: Поиск по email кандидата (подстрока)
         - name: candidate_status
           in: query
-          schema: { type: string, enum: [NEW, TEST, INTERVIEW, OFFER, REJECTED, HIRED] }
+          schema: { type: string, enum: [NEW, TEST, AWAIT_INTERVIEW, INTERVIEW_PASSED, OFFER, REJECTED, HIRED] }
           description: Статус кандидата
 
         - name: vacancy_id
@@ -878,7 +1025,7 @@ paths:
         '403': { description: Недостаточно прав (требуется MANAGER, HR или ADMIN) }
     post:
       summary: Создать оффер для кандидата (связи CREATES, OFFERED, CLOSES)
-      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER.
+      description: Роль HR, MANAGER, ADMIN. При создании оффера статус кандидата автоматически меняется на OFFER. Создавать оффер можно только для кандидата в статусе INTERVIEW_PASSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       requestBody:
@@ -892,12 +1039,12 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OfferResponse' }
-        '400': { description: Кандидат не в статусе INTERVIEW или уже есть активный оффер }
+        '400': { description: Кандидат не в статусе INTERVIEW_PASSED }
 
   /v2/offers/{id}:
     get:
       summary: Получить оффер по ID
-      description: Роль MANAGER, HR, ADMIN может получать офферы.
+      description: Роль MANAGER, HR, ADMIN может видеть офферы.
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -913,7 +1060,7 @@ paths:
         '404': { description: Не найдено }
     patch:
       summary: Обновить статус оффера (согласование менеджером или кандидатом)
-      description: Роль MANAGER
+      description: Роль MANAGER. При  статусе оффера REJECTED_MNG  или REJECTED_CNF статус кандидата → REJECTED. При APPROVED_CND статус кандидата → HIRED, вакансия → CLOSED
       tags: [Offers]
       security: [{ BearerAuth: [] }]
       parameters:
@@ -943,21 +1090,45 @@ paths:
   /v2/analytics/statistics:
     get:
       summary: Данные для диаграммы
-      description: Роль - любая
+      description: |
+        Роль - все, кроме техспециалиста, но при желании можем сделать доступным для всех (на обсуждении)
+        Поддерживается 6 видов графиков в зависимости от комбинации x_axis и y_axis.
+        - x_axis=status, y_axis=count      → распределение кандидатов по статусам
+        - x_axis=status, y_axis=avg_salary → средняя зарплата по статусам
+        - x_axis=vacancy, y_axis=count     → количество кандидатов по вакансиям
+        - x_axis=vacancy, y_axis=avg_salary→ средняя зарплата по вакансиям
+        - x_axis=date, y_axis=count        → динамика количества кандидатов по дням
+        - x_axis=date, y_axis=avg_salary   → динамика средней зарплаты по дням
       tags: [Analytics]
       security: [{ BearerAuth: [] }]
       parameters:
         - name: vacancy_id
           in: query
-          schema: { type: string, format: uuid }
+          schema:
+            type: string
+            format: uuid
+          description: Фильтр по конкретной вакансии (опционально)
         - name: x_axis
           in: query
           required: true
-          schema: { type: string, enum: [status, vacancy, date] }
+          schema:
+            type: string
+            enum: [status, vacancy, date]
+          description: |
+            Группировка данных:
+            - status — по статусу кандидата
+            - vacancy — по вакансии
+            - date — по дням (в labels возвращается строка YYYY-MM-DD)
         - name: y_axis
           in: query
           required: true
-          schema: { type: string, enum: [count, avg_salary] }
+          schema:
+            type: string
+            enum: [count, avg_salary]
+          description: |
+            Показываемое значение:
+            - count — количество кандидатов
+            - avg_salary — средняя зарплата по офферам (для кандидатов, у которых есть оффер)
       responses:
         '200':
           description: OK
@@ -966,8 +1137,36 @@ paths:
               schema:
                 type: object
                 properties:
-                  labels: { type: array, items: { type: string } }
-                  values: { type: array, items: { type: number } }
+                  total:
+                    type: number
+                    nullable: true
+                    description: |
+                      Сумма значений в поле `values` для y_axis=count.
+                      Для y_axis=avg_salary возвращается null.
+                  labels:
+                    type: array
+                    items:
+                      type: string
+                    description: |
+                      Подписи оси X:
+                      - при x_axis=status — названия статусов (например, NEW, INTERVIEW_PASSED, OFFER)
+                      - при x_axis=vacancy — названия вакансий
+                      - при x_axis=date — даты в формате YYYY-MM-DD
+                  values:
+                    type: array
+                    items:
+                      type: number
+                    description: |
+                      Числовые значения оси Y:
+                      - при y_axis=count — целые числа (количество кандидатов)
+                      - при y_axis=avg_salary — числа с плавающей точкой (средняя зарплата)
+                required: [labels, values]
+        '400':
+          description: Некорректная комбинация параметров (например, date+avg_salary, если нет данных)
+        '401':
+          description: Не авторизован
+        '404':
+          description: id не найден
 
   # ==================== Admin & Backup ====================
   /v2/admin/backup:
@@ -1005,3 +1204,77 @@ paths:
                 properties:
                   status: { type: string, example: "restored" }
         '403': { description: Требуются права ADMIN }
+
+  # ==================== Dashboard ====================
+
+  /v2/dashboard/kpi:
+    get:
+      summary: Получение ключевых показателей для дашборда
+      description: |
+        Возвращает 4 основные метрики для отображения на главной панели:
+        - Открытые вакансии
+        - Новые кандидаты (статус NEW)
+        - Предстоящие интервью (статус AWAIT_INTERVIEW)
+        - Офферы на согласовании (статус PENDING)
+        
+        Доступно для всех авторизованных пользователей.
+
+        Для актуальности данных на фронтенде рекомендуется использовать WebScoket или polling
+      tags:
+        - Dashboard
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Успешный ответ с метриками
+          headers:
+              Cache-Control:
+                schema:
+                  type: string
+                  example: "no-cache, no-store, must-revalidate"
+                description: Запрет кэширования для актуальности данных
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - open_vacancies
+                  - new_candidates
+                  - upcoming_interviews
+                  - pending_offers
+                properties:
+                  open_vacancies:
+                    type: integer
+                    minimum: 0
+                    description: Количество открытых вакансий (статус OPEN)
+                    example: 15
+                  new_candidates:
+                    type: integer
+                    minimum: 0
+                    description: Количество кандидатов в статусе NEW
+                    example: 32
+                  upcoming_interviews:
+                    type: integer
+                    minimum: 0
+                    description: Количество предстоящих интервью (статус AWAIT_INTERVIEW)
+                    example: 8
+                  pending_offers:
+                    type: integer
+                    minimum: 0
+                    description: Количество офферов на согласовании (статус PENDING)
+                    example: 5
+              example:
+                open_vacancies: 15
+                new_candidates: 32
+                upcoming_interviews: 8
+                pending_offers: 5
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Not authenticated"

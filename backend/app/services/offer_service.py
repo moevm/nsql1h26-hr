@@ -1,17 +1,104 @@
 from uuid import UUID
+from fastapi import status
+from datetime import datetime, timezone, UTC
 from app.repositories.offer_repo import OfferRepository
-from app.models.offer import OfferCreate, OfferResponse, OfferFilter, OfferFilterResponse
+from app.repositories.candidate_repo import CandidateRepository
+from app.repositories.vacancy_repo import VacancyRepository
+from app.models.offer import (
+    OfferCreate,
+    OfferResponse,
+    OfferFilter,
+    OfferFilterResponse,
+    OfferStatus,
+    OfferPatch,
+    OfferUpdate
+)
+from app.models.vacancy import VacancyStatus
+from app.models.candidate import CandidateStatus
+from app.core.exceptions import AppError
 
 
 class OfferService:
-    def __init__(self, offer_repo: OfferRepository):
+    def __init__(
+        self,
+        offer_repo: OfferRepository,
+        candidate_repo: CandidateRepository,
+        vacancy_repo: VacancyRepository,
+    ):
         self.offer_repo = offer_repo
+        self.candidate_repo = candidate_repo
+        self.vacancy_repo = vacancy_repo
 
     async def create_offer(self, offer_data: OfferCreate) -> OfferResponse:
-        return await self.offer_repo.create_offer(offer_data)
+        candidate_id = offer_data.candidate_id
+        if offer_data.status != OfferStatus.PENDING:
+            raise AppError(
+                "New offer status must be pending", status.HTTP_400_BAD_REQUEST
+            )
+        candidate = await self.candidate_repo.get_candidate_by_id(candidate_id)
+        if not candidate:
+            raise AppError("Candidate not found", status.HTTP_400_BAD_REQUEST)
+        if candidate["status"] != CandidateStatus.INTERVIEW_PASSED:
+            raise AppError(
+                "Candidate's status must be INTERVIEW_PASSED",
+                status.HTTP_400_BAD_REQUEST,
+            )
+        vacancy = await self.vacancy_repo.get_vacancy_by_id(offer_data.vacancy_id)
+        if not vacancy:
+            raise AppError("Vacancy not found", status.HTTP_400_BAD_REQUEST)
+        offer = await self.offer_repo.create_offer(offer_data)
+        if offer:
+            await self.candidate_repo.patch_candidate(
+                candidate["id"], {"status": CandidateStatus.OFFER}
+            )
+        return offer
 
     async def get_offer_by_id(self, offer_id: UUID) -> OfferResponse:
-        return await self.offer_repo.get_offer_by_id(offer_id)
+        offer = await self.offer_repo.get_offer_by_id(offer_id)
+        if not offer:
+            raise AppError("Offer not found", status.HTTP_404_NOT_FOUND)
+        return offer
 
     async def filter_offers(self, filters: OfferFilter) -> OfferFilterResponse:
         return await self.offer_repo.filter_offers(filters)
+    
+    async def update_offer(self, offer_id: UUID, update_data: OfferUpdate) -> OfferResponse:
+        existing = await self.offer_repo.get_offer_by_id(offer_id)
+        if not existing:
+            raise AppError("Offer not found", status.HTTP_404_NOT_FOUND)
+
+        patch_dict = update_data.model_dump(exclude_none=True)
+        for key, value in patch_dict.items():
+            if isinstance(value, UUID):
+                patch_dict[key] = str(value)
+                
+        if not patch_dict:
+            return existing
+
+        if existing.status != OfferStatus.PENDING:
+            raise AppError("Can only edit offer while it is in PENDING status", status.HTTP_400_BAD_REQUEST)
+
+        updated = await self.offer_repo.update_offer(offer_id, patch_dict)
+        return updated
+
+    async def patch_offer(self, offer_id: UUID, patch: OfferPatch) -> OfferResponse:
+        offer = await self.offer_repo.get_offer_by_id(offer_id)
+        if not offer:
+            raise AppError("Offer not found", status.HTTP_404_NOT_FOUND)
+
+        if patch.status == OfferStatus.APPROVED_CND:
+            await self.candidate_repo.patch_candidate(
+                offer.candidate_id, {"status": CandidateStatus.HIRED}
+            )
+            await self.vacancy_repo.patch_vacancy(
+                offer.vacancy_id, {"status": VacancyStatus.CLOSED, "closed_at": datetime.now(timezone.utc)}
+            )
+        if (
+            patch.status == OfferStatus.REJECTED_MNG
+            or patch.status == OfferStatus.REJECTED_CNF
+        ):
+            await self.candidate_repo.patch_candidate(
+                offer.candidate_id, {"status": CandidateStatus.REJECTED}
+            )
+        patched_offer = await self.offer_repo.patch_offer(offer_id, patch)
+        return patched_offer

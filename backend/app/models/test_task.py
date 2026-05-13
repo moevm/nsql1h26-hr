@@ -24,6 +24,11 @@ class TestTaskResponse(BaseModel):
     vacancy_id: UUID
 
 
+class TestTaskPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    test_task_url: HttpUrl | None = None
+
+
 class TestTasksFilter(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=100)
     vacancy_id: UUID | None = None
