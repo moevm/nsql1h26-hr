@@ -31,6 +31,14 @@
   ],
   "vacancies": [
     {
+      "id": "5722518b-72b5-417f-b179-acf021f372a8",
+      "title": "Инженер внедрения",
+      "description": "Необходимо внедряться в предприятия конкурентов и красть оттуда данные. Всё легально",
+      "status": "CLOSED",
+      "created_at": 1778611931,
+      "closed_at": 1778612105
+    },
+    {
       "id": "f94ed4bd-4dce-4806-a603-cca9ec5ec432",
       "title": "ПЛИСовод/RISC-V Dev (Senior+)",
       "description": "Работа на уютном заводе. Задачи: разработка FPGA SystemVerilog/Verilog под ЦОС-систему, интеграция с датчиками и серверами. Требования к кандидату: Asm, C, SystemVerilog, UART, I2C, SPI, DMA, ЦАП/АЦП, ЦОС, знание электричества Калашникова. Работа не пыльная. бьёт током  ",
@@ -44,7 +52,7 @@
       "description": "Поддержка и масштабирование инфраструктуры высоконагруженного сервиса.Требования: Опыт работы с Kubernetes (K8s), настройка CI/CD (GitLab), опыт работы с облаками (Yandex/AWS).Задачи: Автоматизация деплоя, мониторинг доступности сервисов, управление конфигурациями серверов.",
       "status": "CLOSED",
       "created_at": 1778592453,
-      "closed_at": null
+      "closed_at": 1778611848
     },
     {
       "id": "2292afd4-62d6-41f1-9f77-5eb9948bbaff",
@@ -60,7 +68,7 @@
       "description": "Работа в стабильном производственном холдинге (штат 500+ сотрудников).Требования: Знание 1С:ЗУП 8.3, опыт работы с вахтовым методом и сменными графиками.Задачи: Расчет зарплат, отпускных, больничных; подача отчетности в СФР и налоговую. Отмыв 60% +- 3%",
       "status": "CLOSED",
       "created_at": 1778592405,
-      "closed_at": null
+      "closed_at": 1778611860
     },
     {
       "id": "76353b6c-986e-451c-a48a-bffa6669beac",
@@ -76,7 +84,7 @@
       "description": "Единственный HR в быстрорастущий стартап (30 человек). Построение процессов с нуля.Требования: Опыт в подборе (IT/Marketing), знание ТК, навыки формирования корпоративной культуры.Задачи: Полный цикл рекрутинга, адаптация новичков, ведение КДП, организация тимбилдингов.",
       "status": "CLOSED",
       "created_at": 1778592312,
-      "closed_at": null
+      "closed_at": 1778611872
     },
     {
       "id": "d0ac97d3-673d-4039-8a2a-363861c309d1",
@@ -140,6 +148,16 @@
     }
   ],
   "candidates": [
+    {
+      "id": "cf4ca6bf-ae9d-4e7d-8d31-9f87b7e3e550",
+      "full_name": "Штирлиц Отто",
+      "email": "shtitlits@gmail.com",
+      "phone": "+79638527474",
+      "resume_url": null,
+      "status": "HIRED",
+      "vacancy_id": "5722518b-72b5-417f-b179-acf021f372a8",
+      "test_task_id": null
+    },
     {
       "id": "0f156dea-f189-4fff-89c0-61846ec13cf3",
       "full_name": "Полянских Алиса Дмитриевна",
@@ -226,7 +244,7 @@
       "email": "walterwhite@gmail.com",
       "phone": "+78546523125",
       "resume_url": null,
-      "status": "AWAIT_INTERVIEW",
+      "status": "INTERVIEW_PASSED",
       "vacancy_id": "1ed50a78-6a85-4a66-90c4-25de74cd2da0",
       "test_task_id": null
     }
@@ -296,6 +314,15 @@
       "result": "INTERVIEW_PASSED"
     },
     {
+      "id": "0614028f-24a8-4f14-bcae-f000d8f97d61",
+      "candidate_id": "cf4ca6bf-ae9d-4e7d-8d31-9f87b7e3e550",
+      "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
+      "scheduled_at": 1778659200,
+      "zoom_url": null,
+      "feedback": "Штирлиц идет по коридору",
+      "result": "INTERVIEW_PASSED"
+    },
+    {
       "id": "7d4e16e1-5b73-43bc-977e-0a6d9750c342",
       "candidate_id": "43b4227b-550b-40e9-988f-7f023d62457e",
       "tech_spec_id": "673c8559-cf15-4623-9dba-521148f7d355",
@@ -306,6 +333,16 @@
     }
   ],
   "offers": [
+    {
+      "id": "e0ba9c18-b84b-47a3-b051-fe7a170b8f7f",
+      "candidate_id": "cf4ca6bf-ae9d-4e7d-8d31-9f87b7e3e550",
+      "vacancy_id": "5722518b-72b5-417f-b179-acf021f372a8",
+      "created_by": "2c5e2f9d-59f4-4be9-b964-2a709e737ca2",
+      "salary": 155000,
+      "start_at": 1778716800,
+      "created_at": 1778612072,
+      "status": "APPROVED_CND"
+    },
     {
       "id": "ad32c3eb-353c-479d-9805-e0daa471decc",
       "candidate_id": "42be520a-f031-4333-bedc-752c607a8b98",

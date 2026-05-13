@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import status
+from datetime import datetime, timezone, UTC
 from app.repositories.offer_repo import OfferRepository
 from app.repositories.candidate_repo import CandidateRepository
 from app.repositories.vacancy_repo import VacancyRepository
@@ -90,7 +91,7 @@ class OfferService:
                 offer.candidate_id, {"status": CandidateStatus.HIRED}
             )
             await self.vacancy_repo.patch_vacancy(
-                offer.vacancy_id, {"status": VacancyStatus.CLOSED}
+                offer.vacancy_id, {"status": VacancyStatus.CLOSED, "closed_at": datetime.now(timezone.utc)}
             )
         if (
             patch.status == OfferStatus.REJECTED_MNG
