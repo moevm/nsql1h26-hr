@@ -18,6 +18,21 @@ export function Login() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const navigate = useNavigate();
 
+  const getDashboardPathByRole = (role: string): string => {
+    switch (role) {
+      case 'ADMIN':
+        return '/administration';
+      case 'HR':
+        return '/vacancies';
+      case 'MANAGER':
+        return '/offers';
+      case 'TECH_SPEC':
+        return '/interviews';
+      default:
+        return '/vacancies';
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -26,9 +41,10 @@ export function Login() {
     }
     setLoading(true);
     try {
-      await login({ email, password });
+      const response = await login({ email, password });
       toast.success('Добро пожаловать!');
-      navigate('/vacancies');
+      const dashboardPath = getDashboardPathByRole(response.user.role);
+      navigate(dashboardPath);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Ошибка при входе');
