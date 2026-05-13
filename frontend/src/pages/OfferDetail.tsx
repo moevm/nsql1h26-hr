@@ -146,9 +146,9 @@ export function OfferDetail() {
             {canEditOffer && offer.status === 'PENDING' && (
               <button className="btn btn-primary" onClick={() => setShowEditModal(true)}>✏️ Редактировать</button>
             )}
-            {permissions.canDeleteOffer && (
+            {/*permissions.canDeleteOffer && (
               <button className="btn btn-danger" onClick={handleDelete}>🗑️ Удалить</button>
-            )}
+            )*/}
             <button className="btn" onClick={() => navigate('/offers')}>← Назад</button>
           </div>
         </div>
